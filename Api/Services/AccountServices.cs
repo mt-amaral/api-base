@@ -1,0 +1,227 @@
+﻿using System.Security.Cryptography;
+using Api.Context;
+using Api.Dto;
+using Api.Dto.Account;
+using Api.Entities;
+using Api.Entities.Identity;
+using Api.Services.Abstractions;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Api.Configurations;
+
+public class AccountServices(
+    UserManager<User> userManager,
+    SignInManager<User> signInMannger,
+    ApplicationDbContext context,
+    IHttpContextAccessor httpContextAccessor) : IAccountServices
+{
+    
+
+    public async Task<(Response<CreateUserResponseDto?>, short)> RegisterAsync(RegisterRequestDto request, CancellationToken ct)
+    {
+        try
+        {
+            var existing = await userManager.FindByEmailAsync(request.Email);
+            if (existing != null)
+                return (new Response<CreateUserResponseDto?>(null, "Já existe um usuário registrado com esse email."), 400);
+
+            var user = new User(userName: request.Name, email: request.Email);
+
+            var statusCreate = await userManager.CreateAsync(user, request.Password);
+            if (!statusCreate.Succeeded)
+                return (new Response<CreateUserResponseDto?>(null, $"Erro ao criar usuário {user.UserName}"), 400);
+
+            var response = new CreateUserResponseDto(user.UserName!, user.Email!);
+            await context.SaveChangesAsync(ct);
+
+            return (new Response<CreateUserResponseDto?>(response, $"Usuário {user.UserName} registrado com sucesso!"), 200);
+        }
+        catch
+        {
+            return (new Response<CreateUserResponseDto?>(null, $"Erro na criação de usuário: {request.Email}"), 500);
+        }
+    }
+
+    public async Task<(Response<LoginResponseDto?>, short)> LoginAsync(LoginRequestDto request, CancellationToken ct)
+    {
+        try
+        {
+            var user = await userManager.FindByEmailAsync(request.Email);
+            if (user is null)
+                return (new Response<LoginResponseDto?>(null, "Credenciais inválidas"), 400);
+
+            var validPassword = await userManager.CheckPasswordAsync(user, request.Password);
+            if (!validPassword)
+                return (new Response<LoginResponseDto?>(null, "Credenciais inválidas"), 400);
+
+            await signInMannger.SignInAsync(user, new AuthenticationProperties
+            {
+                IsPersistent = request.RememberMe,
+                AllowRefresh = true,
+                ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(ConfigApp.TokenCookieTime)
+            });
+
+            var newRefreshToken = GenerateRefreshToken();
+
+            var storedRefreshToken = await context.RefreshToken
+                .FirstOrDefaultAsync(x => x.UserId == user.Id, ct);
+
+            if (storedRefreshToken is null)
+            {
+                storedRefreshToken = new RefreshToken(newRefreshToken, user.Id);
+                await context.RefreshToken.AddAsync(storedRefreshToken, ct);
+            }
+            else
+            {
+                storedRefreshToken.Replace(newRefreshToken);
+            }
+
+            var ipAddress = httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString();
+            var userAgent = httpContextAccessor.HttpContext?.Request.Headers.UserAgent.ToString();
+
+            var storedSession = await context.UserSession
+                .FirstOrDefaultAsync(x => x.UserId == user.Id, ct);
+
+            if (storedSession is null)
+            {
+                storedSession = new UserSession(user.Id, ipAddress, userAgent);
+                await context.UserSession.AddAsync(storedSession, ct);
+            }
+            else
+            {
+                storedSession.Refresh(ipAddress, userAgent);
+            }
+
+            await context.SaveChangesAsync(ct);
+
+            AppendRefreshTokenCookie(newRefreshToken);
+
+            var response = new LoginResponseDto(user.UserName!, user.Email!);
+            return (new Response<LoginResponseDto?>(response, "Login realizado com sucesso"), 200);
+        }
+        catch
+        {
+            return (new Response<LoginResponseDto?>(null, "Erro interno ao realizar login"), 500);
+        }
+    }
+
+    public async Task<(Response<string?>, short)> RefreshTokenAsync(CancellationToken ct)
+    {
+        try
+        {
+            var httpContext = httpContextAccessor.HttpContext;
+            if (httpContext is null)
+                return (new Response<string?>(null, "Contexto HTTP não encontrado"), 500);
+
+            if (!httpContext.Request.Cookies.TryGetValue(ConfigApp.RefreshTokenCookieName, out var currentRefreshToken))
+                return (new Response<string?>(null, "Refresh token não encontrado"), 401);
+
+            var storedToken = await context.RefreshToken
+                .Include(x => x.User)
+                .FirstOrDefaultAsync(x => x.Token == currentRefreshToken, ct);
+
+            if (storedToken is null || !storedToken.IsActive)
+                return (new Response<string?>(null, "Refresh token inválido ou expirado"), 401);
+
+            var newRefreshToken = GenerateRefreshToken();
+            storedToken.Replace(newRefreshToken);
+
+            var ipAddress = httpContext.Connection.RemoteIpAddress?.ToString();
+            var userAgent = httpContext.Request.Headers.UserAgent.ToString();
+
+            var storedSession = await context.UserSession
+                .FirstOrDefaultAsync(x => x.UserId == storedToken.UserId, ct);
+
+            if (storedSession is null)
+            {
+                storedSession = new UserSession(storedToken.UserId, ipAddress, userAgent);
+                await context.UserSession.AddAsync(storedSession, ct);
+            }
+            else
+            {
+                storedSession.Refresh(ipAddress, userAgent);
+            }
+
+            await signInMannger.SignInAsync(storedToken.User, new AuthenticationProperties
+            {
+                IsPersistent = true,
+                AllowRefresh = true,
+                ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(ConfigApp.TokenCookieTime)
+            });
+
+            await context.SaveChangesAsync(ct);
+
+            AppendRefreshTokenCookie(newRefreshToken);
+
+            return (new Response<string?>("Token renovado com sucesso", "Novo login gerado com sucesso"), 200);
+        }
+        catch
+        {
+            return (new Response<string?>(null, "Erro ao renovar sessão"), 500);
+        }
+    }
+
+    public async Task<(Response<string?>, short)> LogoutAsync(CancellationToken ct)
+    {
+        try
+        {
+            var httpContext = httpContextAccessor.HttpContext;
+
+            if (httpContext != null &&
+                httpContext.Request.Cookies.TryGetValue(ConfigApp.RefreshTokenCookieName, out var refreshToken))
+            {
+                var storedToken = await context.RefreshToken
+                    .FirstOrDefaultAsync(x => x.Token == refreshToken, ct);
+
+                if (storedToken != null && storedToken.IsActive)
+                {
+                    storedToken.Revoke();
+                }
+
+                if (storedToken != null)
+                {
+                    var storedSession = await context.UserSession
+                        .FirstOrDefaultAsync(x => x.UserId == storedToken.UserId, ct);
+
+                    if (storedSession != null && storedSession.IsActive)
+                    {
+                        storedSession.Revoke();
+                    }
+                }
+
+                await context.SaveChangesAsync(ct);
+                httpContext.Response.Cookies.Delete(ConfigApp.RefreshTokenCookieName);
+            }
+
+            await signInMannger.SignOutAsync();
+
+            return (new Response<string?>("Logout realizado com sucesso", "Sessão encerrada com sucesso"), 200);
+        }
+        catch
+        {
+            return (new Response<string?>(null, "Erro ao realizar logout"), 500);
+        }
+    }
+
+    private static string GenerateRefreshToken()
+    {
+        var randomBytes = RandomNumberGenerator.GetBytes(64);
+        return Convert.ToBase64String(randomBytes);
+    }
+
+    private void AppendRefreshTokenCookie(string refreshToken)
+    {
+        var httpContext = httpContextAccessor.HttpContext;
+        if (httpContext is null) return;
+
+        httpContext.Response.Cookies.Append(ConfigApp.RefreshTokenCookieName, refreshToken, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Expires = DateTimeOffset.UtcNow.AddDays(ConfigApp.RefreshTokenCookieTime)
+        });
+    }
+    
+}
