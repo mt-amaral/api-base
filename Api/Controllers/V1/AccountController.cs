@@ -13,7 +13,7 @@ public class AccountController(IAccountServices accountServices, IValidator<Regi
 {
     
     [HttpPost]
-    [Route("Register")]
+    [Route("register")]
     [Authorize(Policy = Permissions.UsersRegister)]
     public async Task<IActionResult> Register([FromBody] RegisterRequestDto request, CancellationToken ct)
     {
@@ -26,7 +26,7 @@ public class AccountController(IAccountServices accountServices, IValidator<Regi
     }
 
     [HttpPost]
-    [Route("Login")]
+    [Route("login")]
     [AllowAnonymous]
     public async Task<IActionResult> Login([FromBody] LoginRequestDto request, CancellationToken ct)
     {
@@ -35,16 +35,24 @@ public class AccountController(IAccountServices accountServices, IValidator<Regi
     }
 
     [HttpPost]
-    [Route("Refresh")]
+    [Route("refresh")]
     [AllowAnonymous]
     public async Task<IActionResult> Refresh(CancellationToken ct)
     {
         var (data, status) = await accountServices.RefreshTokenAsync(ct);
         return StatusCode(status, data);
     }
+    
+    [HttpGet]
+    [Route("checkme")]
+    public async Task<IActionResult> CheckMe(CancellationToken ct)
+    {
+        var (data, status) = await accountServices.ChetckMe(ct);
+        return StatusCode(status, data);
+    }
 
     [HttpPost]
-    [Route("Logout")]
+    [Route("logout")]
     public async Task<IActionResult> Logout(CancellationToken ct)
     {
         var (data, status) = await accountServices.LogoutAsync(ct);

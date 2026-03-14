@@ -14,7 +14,8 @@ public class AccountServices(
     UserManager<User> userManager,
     SignInManager<User> signInMannger,
     ApplicationDbContext context,
-    IHttpContextAccessor httpContextAccessor) : IAccountServices
+    IHttpContextAccessor httpContextAccessor, 
+    IUserLoggedService userLoggedService) : IAccountServices
 {
     
 
@@ -98,7 +99,7 @@ public class AccountServices(
             AppendRefreshTokenCookie(newRefreshToken);
 
             var response = new LoginResponseDto(user.UserName!, user.Email!);
-            return (new Response<LoginResponseDto?>(response, "Login realizado com sucesso"), 200);
+            return (new Response<LoginResponseDto?>(response, null), 200);
         }
         catch
         {
@@ -154,7 +155,7 @@ public class AccountServices(
 
             AppendRefreshTokenCookie(newRefreshToken);
 
-            return (new Response<string?>("Token renovado com sucesso", "Novo login gerado com sucesso"), 200);
+            return (new Response<string?>(null, null), 200);
         }
         catch
         {
@@ -196,11 +197,25 @@ public class AccountServices(
 
             await signInMannger.SignOutAsync();
 
-            return (new Response<string?>("Logout realizado com sucesso", "Sessão encerrada com sucesso"), 200);
+            return (new Response<string?>(null, null), 200);
         }
         catch
         {
             return (new Response<string?>(null, "Erro ao realizar logout"), 500);
+        }
+    }
+    
+    public async Task<(Response<LoginResponseDto?>, short)> ChetckMe(CancellationToken ct)
+    {
+
+        var user =  await userLoggedService.GetUserLoggedAsync();
+        var response = new LoginResponseDto(user.UserName!, user.Email!);
+        try{
+            return (new Response<LoginResponseDto?>(response, "Sessão encerrada com sucesso"), 200);
+        }
+        catch
+        {
+            return (new Response<LoginResponseDto?>(null, "Erro ao realizar logout"), 500);
         }
     }
 
@@ -220,7 +235,7 @@ public class AccountServices(
             HttpOnly = true,
             Secure = true,
             SameSite = SameSiteMode.Strict,
-            Expires = DateTimeOffset.UtcNow.AddDays(ConfigApp.RefreshTokenCookieTime)
+            Expires = DateTimeOffset.UtcNow.AddMinutes(ConfigApp.RefreshTokenCookieTime)
         });
     }
     

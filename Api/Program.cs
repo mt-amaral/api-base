@@ -5,6 +5,7 @@ using Api.Configurations.Seed.Abstraction;
 using Api.Context;
 using Api.Entities.Identity;
 using Api.Middleware;
+using Api.Services;
 using Api.Services.Abstractions;
 using Api.Validators.Account;
 using Microsoft.AspNetCore.Identity;
@@ -20,6 +21,7 @@ builder.Services.AddControllers();
 
 // Services
 builder.Services.AddScoped<IAccountServices, AccountServices>();
+builder.Services.AddScoped<IUserLoggedService, UserLoggedService>();
 
 // Validations
 builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequestDtoValidator>();
@@ -74,8 +76,8 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.LoginPath = "/Login";
     options.LogoutPath = "/Logout";
     options.Cookie.HttpOnly = true;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-    options.Cookie.SameSite = SameSiteMode.Strict;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always; 
+    options.Cookie.SameSite = SameSiteMode.None; //👉 atenção em produção
     options.SlidingExpiration = true;
     options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
     options.Events.OnRedirectToLogin = context =>

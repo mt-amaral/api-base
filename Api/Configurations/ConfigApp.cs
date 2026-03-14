@@ -6,7 +6,7 @@ public static class ConfigApp
 {
 
     // URL usada em ambiente de desenvolvimento
-    public static string WebDevUrl = "http://localhost:3000";
+    public static string WebDevUrl = "http://localhost:5173";
 
     // URL principal de produção
     public static string WebProdUrl = "http://147.93.5.237:10003";
@@ -51,6 +51,6 @@ public static class ConfigApp
     // Tempo de duração de token (minutos)
     public static int TokenCookieTime = 15;
     
-    // Tempo de duração de token (dias)
-    public static int RefreshTokenCookieTime = 7;
+    // Tempo de duração de token (minutos)
+    public static int RefreshTokenCookieTime = 300;
 }
