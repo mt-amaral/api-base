@@ -42,6 +42,8 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("CorsDev", policy => policy
         .WithOrigins(ConfigApp.WebDevUrl)
+        .WithOrigins(ConfigApp.WebProdUrl)
+        .WithOrigins(ConfigApp.WebProd2Url)
         .AllowAnyHeader()
         .AllowAnyMethod()
         .AllowCredentials());
@@ -76,7 +78,7 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.LoginPath = "/Login";
     options.LogoutPath = "/Logout";
     options.Cookie.HttpOnly = true;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always; 
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
     options.Cookie.SameSite = SameSiteMode.None; //👉 atenção em produção
     options.SlidingExpiration = true;
     options.ExpireTimeSpan = TimeSpan.FromMinutes(30);

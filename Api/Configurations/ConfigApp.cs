@@ -9,10 +9,10 @@ public static class ConfigApp
     public static string WebDevUrl = "http://localhost:5173";
 
     // URL principal de produção
-    public static string WebProdUrl = "http://147.93.5.237:10003";
+    public static string WebProdUrl = "http://localhost:5002";
 
     // Caso precise com barra no final
-    public static string WebProd2Url = "http://147.93.5.237:10003/";
+    public static string WebProd2Url = "http://localhost:5002/";
 
     // Tamanho mínimo da senha
     public static int PasswordRequiredLength = 8;
@@ -47,10 +47,10 @@ public static class ConfigApp
 
     // Chave identificadora do cookie de refresh token
     public static string RefreshTokenCookieName = "refreshToken";
-    
+
     // Tempo de duração de token (minutos)
     public static int TokenCookieTime = 15;
-    
+
     // Tempo de duração de token (minutos)
     public static int RefreshTokenCookieTime = 300;
 }
