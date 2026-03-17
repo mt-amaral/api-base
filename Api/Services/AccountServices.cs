@@ -16,7 +16,7 @@ public class AccountServices(
     ApplicationDbContext context,
     IHttpContextAccessor httpContextAccessor, 
     IUserLoggedService userLoggedService) : IAccountServices
-{
+{   
     
 
     public async Task<(Response<CreateUserResponseDto?>, short)> RegisterAsync(RegisterRequestDto request, CancellationToken ct)

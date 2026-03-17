@@ -22,6 +22,8 @@ builder.Services.AddControllers();
 // Services
 builder.Services.AddScoped<IAccountServices, AccountServices>();
 builder.Services.AddScoped<IUserLoggedService, UserLoggedService>();
+builder.Services.AddScoped<IRoleService, RoleServices>();
+builder.Services.AddScoped<IUserService, UserService>();
 
 // Validations
 builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequestDtoValidator>();

@@ -11,5 +11,5 @@ public class User : IdentityUser<long>
         UserName = userName;
         Email = email;
     }
-
+    
 }
