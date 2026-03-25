@@ -13,15 +13,16 @@ public class Response<TData>
         Message = message;
     }
     
-    //public Response(string message, List<string> errors)
-    //{
-    //    Data = default; 
-    //    Message = message;
-    //    Errors = errors;
-    //}
+    public Response(TData? data, string? message = null, List<string>? errors = null)
+    {
+        Data = data;
+        Message = message;
+        Errors = errors;
+    }
+
 
     public TData? Data { get; set; }
     public string? Message { get; set; }
     
-    //public List<string>? Errors { get; set; }
+    public List<string>? Errors { get; set; }
 }

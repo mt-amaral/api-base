@@ -19,30 +19,7 @@ public class AccountServices(
 {   
     
 
-    public async Task<(Response<CreateUserResponseDto?>, short)> RegisterAsync(RegisterRequestDto request, CancellationToken ct)
-    {
-        try
-        {
-            var existing = await userManager.FindByEmailAsync(request.Email);
-            if (existing != null)
-                return (new Response<CreateUserResponseDto?>(null, "Já existe um usuário registrado com esse email."), 400);
 
-            var user = new User(userName: request.Name, email: request.Email);
-
-            var statusCreate = await userManager.CreateAsync(user, request.Password);
-            if (!statusCreate.Succeeded)
-                return (new Response<CreateUserResponseDto?>(null, $"Erro ao criar usuário {user.UserName}"), 400);
-
-            var response = new CreateUserResponseDto(user.UserName!, user.Email!);
-            await context.SaveChangesAsync(ct);
-
-            return (new Response<CreateUserResponseDto?>(response, $"Usuário {user.UserName} registrado com sucesso!"), 200);
-        }
-        catch
-        {
-            return (new Response<CreateUserResponseDto?>(null, $"Erro na criação de usuário: {request.Email}"), 500);
-        }
-    }
 
     public async Task<(Response<LoginResponseDto?>, short)> LoginAsync(LoginRequestDto request, CancellationToken ct)
     {
@@ -98,7 +75,29 @@ public class AccountServices(
 
             AppendRefreshTokenCookie(newRefreshToken);
 
-            var response = new LoginResponseDto(user.UserName!, user.Email!);
+            var userRoles = await context.Set<IdentityUserRole<long>>()
+                .Where(x => x.UserId == user.Id)
+                .ToListAsync(ct);
+
+            var roleId = userRoles
+                .Select(x => x.RoleId)
+                .FirstOrDefault();
+
+            var claims = await context.Set<RoleClaim>()
+                .Where(rc => userRoles.Select(ur => ur.RoleId).Contains(rc.RoleId))
+                .Select(rc => rc.ClaimValue!)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct()
+                .ToListAsync(ct);
+
+            var response = new LoginResponseDto(
+                user.Id,
+                user.UserName!,
+                user.Email!,
+                roleId,
+                claims
+            );
+
             return (new Response<LoginResponseDto?>(response, null), 200);
         }
         catch
@@ -204,18 +203,42 @@ public class AccountServices(
             return (new Response<string?>(null, "Erro ao realizar logout"), 500);
         }
     }
-    
-    public async Task<(Response<LoginResponseDto?>, short)> ChetckMe(CancellationToken ct)
-    {
 
-        var user =  await userLoggedService.GetUserLoggedAsync();
-        var response = new LoginResponseDto(user.UserName!, user.Email!);
-        try{
-            return (new Response<LoginResponseDto?>(response, "Sessão encerrada com sucesso"), 200);
+    
+    public async Task<(Response<LoginResponseDto?>, short)> CheckMe(CancellationToken ct)
+    {
+        try
+        {
+            var user = await userLoggedService.GetUserLoggedAsync();
+
+            var userRoles = await context.Set<IdentityUserRole<long>>()
+                .Where(x => x.UserId == user.Id)
+                .ToListAsync(ct);
+
+            var roleId = userRoles
+                .Select(x => x.RoleId)
+                .FirstOrDefault();
+
+            var claims = await context.Set<RoleClaim>()
+                .Where(rc => userRoles.Select(ur => ur.RoleId).Contains(rc.RoleId))
+                .Select(rc => rc.ClaimValue!)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct()
+                .ToListAsync(ct);
+
+            var response = new LoginResponseDto(
+                user.Id,
+                user.UserName!,
+                user.Email!,
+                roleId,
+                claims
+            );
+
+            return (new Response<LoginResponseDto?>(response, null), 200);
         }
         catch
         {
-            return (new Response<LoginResponseDto?>(null, "Erro ao realizar logout"), 500);
+            return (new Response<LoginResponseDto?>(null, "Erro ao buscar usuário logado"), 500);
         }
     }
 

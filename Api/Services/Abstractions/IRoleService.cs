@@ -1,11 +1,23 @@
 ﻿using Api.Dto;
-using Api.Dto.Account;
 using Api.Dto.Role;
-using Api.Dto.User;
 
 namespace Api.Services.Abstractions;
 
 public interface IRoleService
 {
-    Task<(Response<List<RoleResponseDto>?>, short)> ListRolesAsync(CancellationToken ct);
+    Task<(PagedResponse<List<GetAllRoleResponseDto>?>, short)> ListRolesPageAsync(FilterRoleRequestDto request, CancellationToken ct);
+
+    Task<(Response<List<RoleResponseDto>?>, short)> ListAllRolesAsync(CancellationToken ct);
+
+    Task<(Response<RoleResponseDto?>, short)> CreateAsync(
+        CreateRoleRequestDto request,
+        CancellationToken ct);
+
+    Task<(Response<RoleResponseDto?>, short)> UpdateAsync(
+        UpdateRoleRequestDto request,
+        CancellationToken ct);
+
+    Task<(Response<bool>, short)> DeleteAsync(
+        long id,
+        CancellationToken ct);
 }

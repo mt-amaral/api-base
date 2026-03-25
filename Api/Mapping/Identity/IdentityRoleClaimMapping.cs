@@ -15,6 +15,5 @@ public class RoleClaimMapping : IEntityTypeConfiguration<RoleClaim>
 
         builder.Property(x => x.ClaimType).HasMaxLength(100);
         builder.Property(x => x.ClaimValue).HasMaxLength(200);
-        builder.Property(x => x.Description).HasMaxLength(300);
     }
 }

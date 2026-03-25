@@ -1,3 +1,8 @@
 ﻿namespace Api.Dto.Account;
-
-public record LoginResponseDto(string Name, string Email);
+public record LoginResponseDto(
+    long Id,
+    string Name,
+    string Email,
+    long RoleId,
+    List<string>? Claims
+);

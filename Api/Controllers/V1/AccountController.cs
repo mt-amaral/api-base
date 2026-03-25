@@ -2,28 +2,15 @@
 using Api.Configurations.Identity;
 using Api.Dto.Account;
 using Api.Services.Abstractions;
-using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Controllers.V1;
 
 
-public class AccountController(IAccountServices accountServices, IValidator<RegisterRequestDto> registerValidator) : BaseController
+public class AccountController(IAccountServices accountServices) : BaseController
 {
     
-    [HttpPost]
-    [Route("register")]
-    [Authorize(Policy = Permissions.UsersRegister)]
-    public async Task<IActionResult> Register([FromBody] RegisterRequestDto request, CancellationToken ct)
-    {
-        var validationResult = await ValidateRequestAsync(request, registerValidator, ct);
-        if (validationResult is not null)
-            return validationResult;
-
-        var (data, status) = await accountServices.RegisterAsync(request, ct);
-        return StatusCode(status, data);
-    }
 
     [HttpPost]
     [Route("login")]
@@ -47,7 +34,7 @@ public class AccountController(IAccountServices accountServices, IValidator<Regi
     [Route("checkme")]
     public async Task<IActionResult> CheckMe(CancellationToken ct)
     {
-        var (data, status) = await accountServices.ChetckMe(ct);
+        var (data, status) = await accountServices.CheckMe(ct);
         return StatusCode(status, data);
     }
 

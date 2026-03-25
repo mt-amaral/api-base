@@ -1,37 +1,32 @@
+using System.Security.Claims;
+using System.Threading.RateLimiting;
 using Api.Configurations;
 using Api.Configurations.Identity;
 using Api.Configurations.Seed;
 using Api.Configurations.Seed.Abstraction;
 using Api.Context;
+using Api.Dto;
 using Api.Entities.Identity;
 using Api.Middleware;
 using Api.Services;
 using Api.Services.Abstractions;
-using Api.Validators.Account;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using FluentValidation;
-using Microsoft.AspNetCore.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddControllers();
 
-// Services
 builder.Services.AddScoped<IAccountServices, AccountServices>();
 builder.Services.AddScoped<IUserLoggedService, UserLoggedService>();
 builder.Services.AddScoped<IRoleService, RoleServices>();
 builder.Services.AddScoped<IUserService, UserService>();
-
-// Validations
-builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequestDtoValidator>();
-
-// Claims Transformation
+builder.Services.AddScoped<IRoleClaimService, RoleClaimService>();
 builder.Services.AddScoped<IClaimsTransformation, AppClaimsTransformation>();
 
-// Seed (
 if (builder.Environment.IsStaging())
 {
     builder.Services.AddScoped<IAppSeed, RoleSeed>();
@@ -39,7 +34,64 @@ if (builder.Environment.IsStaging())
     builder.Services.AddScoped<IAppSeed, RoleClaimSeed>();
 }
 
-// CORS
+if (!builder.Environment.IsDevelopment())
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    });
+}
+
+builder.Services.AddRateLimiter(options =>
+{
+    // TODO fazer mais testes
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("api", httpContext =>
+    {
+        string GetRealIp()
+        {
+            if (httpContext.Request.Headers.TryGetValue("X-Forwarded-For", out var forwardedFor))
+            {
+                var ip = forwardedFor.FirstOrDefault()?.Split(',').FirstOrDefault()?.Trim();
+                if (!string.IsNullOrEmpty(ip)) return ip;
+            }
+            return httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        }
+
+        string key;
+        bool isAuthenticated = httpContext.User.Identity?.IsAuthenticated == true;
+        
+        if (isAuthenticated)
+        {
+            var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            key = userId ?? GetRealIp();
+        }
+        else
+        {
+            var userAgent = httpContext.Request.Headers.UserAgent.ToString();
+            key = $"{GetRealIp()}:{userAgent}";
+        }
+        
+        var permitLimit = isAuthenticated 
+            ? ConfigApp.RateLimitPermitLimitAuthenticated 
+            : ConfigApp.RateLimitPermitLimitAnonymous;
+            
+        var queueLimit = isAuthenticated 
+            ? ConfigApp.RateLimitQueueLimitAuthenticated 
+            : ConfigApp.RateLimitQueueLimitAnonymous;
+
+        return RateLimitPartition.GetSlidingWindowLimiter(key, _ => new SlidingWindowRateLimiterOptions
+        {
+            PermitLimit = permitLimit,
+            Window = TimeSpan.FromSeconds(ConfigApp.RateLimitWindowSeconds),
+            SegmentsPerWindow = ConfigApp.RateLimitSegmentsPerWindow,
+            QueueProcessingOrder = ConfigApp.QueueProcessingOrder,
+            QueueLimit = queueLimit,
+            AutoReplenishment = true
+        });
+    });
+});
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("CorsDev", policy => policy
@@ -58,7 +110,6 @@ builder.Services.AddCors(options =>
         .AllowCredentials());
 });
 
-// Identity
 builder.Services.AddIdentity<User, Role>(options =>
 {
     options.Password.RequiredLength = ConfigApp.PasswordRequiredLength;
@@ -74,14 +125,13 @@ builder.Services.AddIdentity<User, Role>(options =>
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
 
-// Cookie Configuration
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/Login";
     options.LogoutPath = "/Logout";
     options.Cookie.HttpOnly = true;
     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-    options.Cookie.SameSite = SameSiteMode.None; //👉 atenção em produção
+    options.Cookie.SameSite = SameSiteMode.None;
     options.SlidingExpiration = true;
     options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
     options.Events.OnRedirectToLogin = context =>
@@ -106,7 +156,6 @@ builder.Services.ConfigureApplicationCookie(options =>
     };
 });
 
-// Authorization Policies
 builder.Services.AddAuthorization(options =>
 {
     foreach (var permission in Permissions.GetPermissions())
@@ -116,7 +165,6 @@ builder.Services.AddAuthorization(options =>
     }
 });
 
-// Controllers with Global Authorization
 builder.Services.AddControllers(options =>
 {
     var policy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
@@ -127,9 +175,29 @@ builder.Services.AddControllers(options =>
 .AddNewtonsoftJson(options =>
 {
     options.SerializerSettings.NullValueHandling = NullValueHandling.Ignore;
+})
+.ConfigureApiBehaviorOptions(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var errors = context.ModelState
+            .Where(x => x.Value?.Errors.Count > 0)
+            .SelectMany(x => x.Value!.Errors.Select(e =>
+                string.IsNullOrWhiteSpace(e.ErrorMessage)
+                    ? $"Campo inválido: {x.Key}"
+                    : e.ErrorMessage))
+            .ToList();
+
+        var response = new Response<object?>(
+            null,
+            "Dados inválidos.",
+            errors
+        );
+
+        return new BadRequestObjectResult(response);
+    };
 });
 
-// Swagger
 builder.Services.AddSwaggerGen(c =>
 {
     var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
@@ -142,13 +210,11 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Database Context
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseCors("CorsDev");
@@ -175,7 +241,6 @@ if (app.Environment.IsStaging())
         c.InjectStylesheet("/swagger-ui/SwaggerDark.css");
     });
 
-    // Apply migrations and seed data in Staging
     using (var scope = app.Services.CreateScope())
     {
         var services = scope.ServiceProvider;
@@ -197,11 +262,14 @@ if (app.Environment.IsStaging())
         }
     }
 }
-
+app.UseRouting();
+app.UseForwardedHeaders();
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
-app.MapControllers();
+
+app.UseRateLimiter();
+app.MapControllers().RequireRateLimiting("api");
 app.UseMiddleware<ExceptionMiddleware>();
 
 app.Run();
