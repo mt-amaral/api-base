@@ -1,6 +1,6 @@
+using Api.Dto;
 using System.Net;
 using System.Text.Json;
-using Api.Dto;
 
 namespace Api.Middleware;
 

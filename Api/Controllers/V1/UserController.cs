@@ -8,7 +8,7 @@ namespace Api.Controllers.V1;
 
 public class UserController(IUserService userService) : BaseController
 {
-    
+
     [HttpGet]
     [Route("list-users")]
     [Authorize(Policy = Permissions.UsersView)]
@@ -17,7 +17,7 @@ public class UserController(IUserService userService) : BaseController
         var (data, status) = await userService.GetUsersAsync(request, ct);
         return StatusCode(status, data);
     }
-    
+
     [HttpPost]
     [Route("create")]
     [Authorize(Policy = Permissions.UsersRegister)]
@@ -26,7 +26,7 @@ public class UserController(IUserService userService) : BaseController
         var (data, status) = await userService.CreateAsync(request, ct);
         return StatusCode(status, data);
     }
-    
+
     [HttpPost]
     [Route("update")]
     [Authorize(Policy = Permissions.UsersUpdate)]
@@ -35,7 +35,7 @@ public class UserController(IUserService userService) : BaseController
         var (data, status) = await userService.UpdateAsnc(UserId, userRequest, ct);
         return StatusCode(status, data);
     }
-    
+
     [HttpPost]
     [Route("update-logged")]
     public async Task<IActionResult> UpdateUserLogged([FromBody] UpdateUserRequestDto userRequest, CancellationToken ct)
@@ -43,7 +43,7 @@ public class UserController(IUserService userService) : BaseController
         var (data, status) = await userService.UpdateLoggedAsnc(userRequest, ct);
         return StatusCode(status, data);
     }
-    
+
     [HttpDelete]
     [Route("delete/{id:long}")]
     [Authorize(Policy = Permissions.UsersDelete)]

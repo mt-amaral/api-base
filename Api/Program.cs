@@ -1,5 +1,3 @@
-using System.Security.Claims;
-using System.Threading.RateLimiting;
 using Api.Configurations;
 using Api.Configurations.Identity;
 using Api.Configurations.Seed;
@@ -11,15 +9,73 @@ using Api.Middleware;
 using Api.Services;
 using Api.Services.Abstractions;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using Npgsql;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using Serilog;
+using System.Security.Claims;
+using System.Threading.RateLimiting;
+using OpenTelemetry.Logs;
 
 var builder = WebApplication.CreateBuilder(args);
 
 
+builder.Host.UseSerilog((context, config) =>
+{
+    config.ReadFrom.Configuration(context.Configuration)
+          .Enrich.WithProperty("Application", "api-base")
+          .Enrich.WithProperty("Environment", context.HostingEnvironment.EnvironmentName);
+
+    
+    if (context.HostingEnvironment.IsStaging() || context.HostingEnvironment.IsDevelopment())
+    {
+        config.WriteTo.OpenTelemetry(options =>
+        {
+            options.Endpoint = "http://otel-collector:4318"; 
+            options.Protocol = Serilog.Sinks.OpenTelemetry.OtlpProtocol.HttpProtobuf;
+            options.ResourceAttributes.Add("service.name", "api-base");
+        });
+    }
+});
+
+builder.Services.AddHealthChecks();
+builder.Logging.AddOpenTelemetry(logging =>
+{
+    logging.IncludeFormattedMessage = true;
+    logging.IncludeScopes = true;
+    
+    logging.AddOtlpExporter(opt =>
+    {
+        opt.Endpoint = new Uri("http://otel-collector:4318"); // OTLP HTTP
+        opt.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf;
+    });
+});
+
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(resource => resource.AddService("api-base"))
+    .WithMetrics(metrics => metrics
+        .AddAspNetCoreInstrumentation()          // métricas de requisições HTTP
+        .AddHttpClientInstrumentation()          // métricas de chamadas HTTP
+        .AddRuntimeInstrumentation()             // métricas do .NET (GC, threads)
+        .AddPrometheusExporter())                
+    .WithTracing(tracing => tracing
+        .AddAspNetCoreInstrumentation()          // traces de requisições HTTP
+        .AddHttpClientInstrumentation()          // traces de chamadas HTTP
+        .AddEntityFrameworkCoreInstrumentation() // traces do EF Core
+        .SetSampler(new AlwaysOnSampler())       
+        .AddOtlpExporter(opt =>
+        {
+            opt.Endpoint = new Uri("http://otel-collector:4318"); // OTLP HTTP
+            opt.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf;
+        }));
+
+// Services
 builder.Services.AddScoped<IAccountServices, AccountServices>();
 builder.Services.AddScoped<IUserLoggedService, UserLoggedService>();
 builder.Services.AddScoped<IRoleService, RoleServices>();
@@ -60,7 +116,7 @@ builder.Services.AddRateLimiter(options =>
 
         string key;
         bool isAuthenticated = httpContext.User.Identity?.IsAuthenticated == true;
-        
+
         if (isAuthenticated)
         {
             var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -71,13 +127,13 @@ builder.Services.AddRateLimiter(options =>
             var userAgent = httpContext.Request.Headers.UserAgent.ToString();
             key = $"{GetRealIp()}:{userAgent}";
         }
-        
-        var permitLimit = isAuthenticated 
-            ? ConfigApp.RateLimitPermitLimitAuthenticated 
+
+        var permitLimit = isAuthenticated
+            ? ConfigApp.RateLimitPermitLimitAuthenticated
             : ConfigApp.RateLimitPermitLimitAnonymous;
-            
-        var queueLimit = isAuthenticated 
-            ? ConfigApp.RateLimitQueueLimitAuthenticated 
+
+        var queueLimit = isAuthenticated
+            ? ConfigApp.RateLimitQueueLimitAuthenticated
             : ConfigApp.RateLimitQueueLimitAnonymous;
 
         return RateLimitPartition.GetSlidingWindowLimiter(key, _ => new SlidingWindowRateLimiterOptions
@@ -262,6 +318,7 @@ if (app.Environment.IsStaging())
         }
     }
 }
+
 app.UseRouting();
 app.UseForwardedHeaders();
 app.UseHttpsRedirection();
@@ -271,5 +328,7 @@ app.UseAuthorization();
 app.UseRateLimiter();
 app.MapControllers().RequireRateLimiting("api");
 app.UseMiddleware<ExceptionMiddleware>();
+app.UseOpenTelemetryPrometheusScrapingEndpoint(); 
+app.MapHealthChecks("/health");
 
 app.Run();

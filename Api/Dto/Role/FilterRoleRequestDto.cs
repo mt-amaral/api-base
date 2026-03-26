@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Api.Dto.User;
 
 namespace Api.Dto.Role;
 

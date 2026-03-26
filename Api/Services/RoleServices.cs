@@ -69,8 +69,8 @@ public class RoleServices(ApplicationDbContext context) : IRoleService
             return (new Response<List<RoleResponseDto>?>(null, $"Erro ao listar Perfis!"), 500);
         }
     }
-    
-    
+
+
 
     public async Task<(Response<RoleResponseDto?>, short)> CreateAsync(CreateRoleRequestDto request, CancellationToken ct)
     {

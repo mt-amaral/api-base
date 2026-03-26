@@ -1,8 +1,8 @@
-﻿using System.Security.Claims;
-using Api.Configurations.Identity;
+﻿using Api.Configurations.Identity;
 using Api.Configurations.Seed.Abstraction;
 using Api.Entities.Identity;
 using Microsoft.AspNetCore.Identity;
+using System.Security.Claims;
 
 public sealed class RoleClaimSeed : IAppSeed
 {
@@ -34,7 +34,7 @@ public sealed class RoleClaimSeed : IAppSeed
             if (alreadyExists)
                 continue;
 
-            var result = await roleManager.AddClaimAsync( role, new Claim(permission.ClaimType, permission.PermissionName));
+            var result = await roleManager.AddClaimAsync(role, new Claim(permission.ClaimType, permission.PermissionName));
 
             if (!result.Succeeded)
             {

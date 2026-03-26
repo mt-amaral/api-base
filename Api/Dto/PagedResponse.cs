@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text.Json.Serialization;
-
-namespace Api.Dto;
+﻿namespace Api.Dto;
 
 public class PagedResponse<TData> : Response<TData>
 {

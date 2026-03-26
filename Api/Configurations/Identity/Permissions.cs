@@ -19,7 +19,7 @@ public static class Permissions
     public const string RolesDelete = "users.roles.delete";
     public const string ClaimsView = "users.claims.view";
     public const string ClaimsUpdate = "users.claims.update";
-    
+
 
     public static IEnumerable<PermissionDefinition> GetPermissions()
     {
@@ -29,16 +29,16 @@ public static class Permissions
             new(UsersRegister, Permission, "Pode criar novos usuários"),
             new(UsersUpdate, Permission, "Pode atualizar dados de usuários"),
             new(UsersDelete, Permission, "Pode deletar usuários"),
-            
+
             new(RolesView, Permission, "Pode visualizar perfis"),
             new(RolesRegister, Permission, "Pode criar novos perfis"),
             new(RolesUpdate, Permission, "Pode atualizar dados de perfis"),
             new(RolesDelete, Permission, "Pode deletar perfis"),
-            
+
             new(ClaimsView, Permission, "Pode visualizar permissões de perfil"),
             new(ClaimsUpdate, Permission, "Pode atualizar permissões de perfil"),
         };
     }
 }
 
-public record PermissionDefinition( string PermissionName, string ClaimType, string Description);
+public record PermissionDefinition(string PermissionName, string ClaimType, string Description);

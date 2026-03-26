@@ -1,23 +1,22 @@
-﻿using System.Security.Cryptography;
+﻿using Api.Configurations;
 using Api.Context;
 using Api.Dto;
 using Api.Dto.Account;
-using Api.Entities;
 using Api.Entities.Identity;
 using Api.Services.Abstractions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Api.Configurations;
+using System.Security.Cryptography;
 
 public class AccountServices(
     UserManager<User> userManager,
     SignInManager<User> signInMannger,
     ApplicationDbContext context,
-    IHttpContextAccessor httpContextAccessor, 
+    IHttpContextAccessor httpContextAccessor,
     IUserLoggedService userLoggedService) : IAccountServices
-{   
-    
+{
+
 
 
 
@@ -204,7 +203,7 @@ public class AccountServices(
         }
     }
 
-    
+
     public async Task<(Response<LoginResponseDto?>, short)> CheckMe(CancellationToken ct)
     {
         try
@@ -261,5 +260,5 @@ public class AccountServices(
             Expires = DateTimeOffset.UtcNow.AddMinutes(ConfigApp.RefreshTokenCookieTime)
         });
     }
-    
+
 }

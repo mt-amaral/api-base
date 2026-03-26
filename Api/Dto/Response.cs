@@ -1,7 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Text.Json.Serialization;
-
-namespace Api.Dto;
+﻿namespace Api.Dto;
 
 public class Response<TData>
 {
@@ -12,7 +9,7 @@ public class Response<TData>
         Data = data;
         Message = message;
     }
-    
+
     public Response(TData? data, string? message = null, List<string>? errors = null)
     {
         Data = data;
@@ -23,6 +20,6 @@ public class Response<TData>
 
     public TData? Data { get; set; }
     public string? Message { get; set; }
-    
+
     public List<string>? Errors { get; set; }
 }

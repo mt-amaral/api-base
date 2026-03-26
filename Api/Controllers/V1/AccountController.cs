@@ -1,6 +1,4 @@
-﻿using Api.Configurations;
-using Api.Configurations.Identity;
-using Api.Dto.Account;
+﻿using Api.Dto.Account;
 using Api.Services.Abstractions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,7 +8,7 @@ namespace Api.Controllers.V1;
 
 public class AccountController(IAccountServices accountServices) : BaseController
 {
-    
+
 
     [HttpPost]
     [Route("login")]
@@ -29,7 +27,7 @@ public class AccountController(IAccountServices accountServices) : BaseControlle
         var (data, status) = await accountServices.RefreshTokenAsync(ct);
         return StatusCode(status, data);
     }
-    
+
     [HttpGet]
     [Route("checkme")]
     public async Task<IActionResult> CheckMe(CancellationToken ct)
@@ -45,5 +43,5 @@ public class AccountController(IAccountServices accountServices) : BaseControlle
         var (data, status) = await accountServices.LogoutAsync(ct);
         return StatusCode(status, data);
     }
-    
+
 }

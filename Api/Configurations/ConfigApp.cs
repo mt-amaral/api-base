@@ -14,7 +14,7 @@ public static class ConfigApp
 
     // Caso precise com barra no final
     public static string WebProd2Url = "http://localhost:5002/";
-    
+
     /// ========== Entity ==========
     // Tamanho mínimo da senha
     public static int PasswordRequiredLength = 8;
@@ -36,7 +36,7 @@ public static class ConfigApp
 
     // Tempo que o usuário fica bloqueado
     public static TimeSpan LockoutDefaultTimeSpan = TimeSpan.FromMinutes(20);
-    
+
     // Claim usada como identificador do usuário
     public static string UserIdClaimType = ClaimTypes.NameIdentifier;
 
@@ -54,26 +54,26 @@ public static class ConfigApp
 
     // Tempo de duração de token (minutos)
     public static int RefreshTokenCookieTime = 300;
-    
+
     // ========== Rate Limiting ==========
-    
+
     // Limites para clientes autenticados
     // Quantidade máxima de requisições permitidas por janela 
     public static int RateLimitPermitLimitAuthenticated = 200;
-    
+
     // Tempo da janela de contagem  (segundos)
-    public static int RateLimitWindowSeconds = 60;   
-    
+    public static int RateLimitWindowSeconds = 60;
+
     // Número de segmentos da janela
-    public static int RateLimitSegmentsPerWindow = 6;    
-    
+    public static int RateLimitSegmentsPerWindow = 6;
+
     // Quantidade máxima de requisições esperando na fila
-    public static int RateLimitQueueLimitAuthenticated = 10;        
-    
+    public static int RateLimitQueueLimitAuthenticated = 10;
+
     // Limites para clientes não autenticados
-    public static int RateLimitPermitLimitAnonymous = 120;          
-    public static int RateLimitQueueLimitAnonymous = 5;   
-    
+    public static int RateLimitPermitLimitAnonymous = 120;
+    public static int RateLimitQueueLimitAnonymous = 5;
+
     // Se estourar o limite, processa a fila por ordem de chegada
     public static QueueProcessingOrder QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
 }

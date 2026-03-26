@@ -1,5 +1,4 @@
 ﻿using Api.Dto;
-using Api.Dto.Account;
 using Api.Dto.User;
 
 namespace Api.Services.Abstractions;

@@ -11,7 +11,7 @@ namespace Api.Services;
 public class UserService(ApplicationDbContext context,
     UserManager<User> userManager, IUserLoggedService userLoggedService) : IUserService
 {
-    
+
     public async Task<(PagedResponse<List<UserResponseDto>?>, short)> GetUsersAsync(FilterUsersRequestDto request, CancellationToken ct)
     {
         try
@@ -69,7 +69,7 @@ public class UserService(ApplicationDbContext context,
             );
         }
     }
-    
+
     public async Task<(Response<UserResponseDto?>, short)> CreateAsync(CreateRequestDto request, CancellationToken ct)
     {
         try
@@ -116,7 +116,7 @@ public class UserService(ApplicationDbContext context,
             return (new Response<UserResponseDto?>(null, $"Erro na criação de usuário: {request.Email}"), 500);
         }
     }
-    
+
     public async Task<(Response<UserResponseDto?>, short)> UpdateAsnc(long userId, UpdateUserRequestDto userRequest, CancellationToken ct)
     {
         try
@@ -140,7 +140,7 @@ public class UserService(ApplicationDbContext context,
         try
         {
             var entity = await userLoggedService.GetUserLoggedAsync();
-            
+
             return await UpdateUserAsync(entity, request, ct);
         }
         catch
@@ -148,7 +148,7 @@ public class UserService(ApplicationDbContext context,
             return (new Response<UserResponseDto?>(null, $"Erro na atualização de usuário: {request.Email}"), 500);
         }
     }
-    
+
     private async Task<(Response<UserResponseDto?>, short)> UpdateUserAsync(
         User entity,
         UpdateUserRequestDto userRequest,
@@ -187,8 +187,8 @@ public class UserService(ApplicationDbContext context,
 
         return (new Response<UserResponseDto?>(response, $"Usuário {response.Name} atualizado com sucesso"), 200);
     }
-    
-    
+
+
     public async Task<(Response<bool>, short)> DeleteAsync(long userId, CancellationToken ct)
     {
         try
@@ -211,8 +211,8 @@ public class UserService(ApplicationDbContext context,
             return (new Response<bool>(false, "Erro ao remover usuário"), 500);
         }
     }
-    
-    
+
+
     private async Task<(Response<UserResponseDto?>, short)?> UpdateRoleIfNeededAsync(
         long userId,
         long? roleId,
@@ -240,7 +240,7 @@ public class UserService(ApplicationDbContext context,
 
         return null;
     }
-    
+
     private async Task<(Response<UserResponseDto?>, short)?> UpdatePasswordIfNeededAsync(
         User entity,
         UpdateUserRequestDto userRequest)
@@ -256,8 +256,8 @@ public class UserService(ApplicationDbContext context,
 
         return (new Response<UserResponseDto?>(null, "Erro ao atualizar senha"), 400);
     }
-    
-    
+
+
     private async Task<bool> RoleExistsAsync(long roleId, CancellationToken ct)
     {
         return await context.Roles

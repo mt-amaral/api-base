@@ -3,7 +3,6 @@
     <Project Path="Api/Api.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="Api.Benchmarks\Api.Benchmarks.csproj" Type="Classic C#" />
     <Project Path="Api.UnitTests\Api.UnitTests.csproj" Type="Classic C#" />
   </Folder>
 </Solution>

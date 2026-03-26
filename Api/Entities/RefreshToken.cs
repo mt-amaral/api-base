@@ -1,7 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-using Api.Entities.Identity;
+﻿using Api.Entities.Identity;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 [Index(nameof(Token), IsUnique = true)]
 [Index(nameof(UserId), IsUnique = true)]
@@ -37,9 +37,9 @@ public class RefreshToken
 
     public bool IsExpired => DateTime.UtcNow >= ExpiresAtUtc;
 
- 
+
     public bool IsRevoked => RevokedAtUtc.HasValue;
-    
+
     public bool IsActive => !IsExpired && !IsRevoked;
 
     public void Revoke()

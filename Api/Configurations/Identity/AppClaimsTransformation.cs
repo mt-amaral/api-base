@@ -1,7 +1,7 @@
-using System.Security.Claims;
 using Api.Entities.Identity;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
+using System.Security.Claims;
 
 namespace Api.Configurations.Identity;
 

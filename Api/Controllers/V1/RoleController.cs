@@ -11,12 +11,12 @@ public class RoleController(IRoleService roleService) : BaseController
     [HttpGet]
     [Route("list-roles")]
     [Authorize(Policy = Permissions.RolesView)]
-    public async Task<IActionResult> ListRolesPage([FromQuery]FilterRoleRequestDto request, CancellationToken ct)
+    public async Task<IActionResult> ListRolesPage([FromQuery] FilterRoleRequestDto request, CancellationToken ct)
     {
         var (data, status) = await roleService.ListRolesPageAsync(request, ct);
         return StatusCode(status, data);
     }
-    
+
     [HttpGet]
     [Route("list-all-roles")]
     public async Task<IActionResult> ListRoles(CancellationToken ct)

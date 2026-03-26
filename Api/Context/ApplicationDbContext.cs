@@ -1,9 +1,7 @@
-﻿using Api.Entities;
+﻿using Api.Entities.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using System.Reflection.Emit;
-using Api.Entities.Identity;
 
 namespace Api.Context;
 
@@ -17,9 +15,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     RoleClaim,
     IdentityUserToken<long>>(options)
 {
-        public DbSet<User> User  => Set<User>();
-        public DbSet<RefreshToken> RefreshToken  => Set<RefreshToken>();
-        public DbSet<UserSession>  UserSession => Set<UserSession>();
+    public DbSet<User> User => Set<User>();
+    public DbSet<RefreshToken> RefreshToken => Set<RefreshToken>();
+    public DbSet<UserSession> UserSession => Set<UserSession>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

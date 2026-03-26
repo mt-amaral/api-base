@@ -1,4 +1,5 @@
 ﻿namespace Api.Dto.Account;
+
 public record LoginResponseDto(
     long Id,
     string Name,
