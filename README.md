@@ -2,7 +2,7 @@
 
 API em ASP.NET Core com foco em autenticação usando **ASP.NET Identity**, **cookie auth** e **refresh token**.
 
-A ideia do projeto é manter tudo simples, organizado e com um padrão bem definido:
+A ideia do projeto é manter tudo simples, organizado e com um padrão bem definido, para servir como template para futuros projetos:
 
 - **DTOs com `record`** para entrada e saída
 - **Response padrão** para quase todas as respostas da API
