@@ -8,6 +8,9 @@ public static class ConfigApp
 
     // URL usada em ambiente de desenvolvimento
     public static string WebDevUrl = "http://localhost:5173";
+    
+    // URL usada em ambiente de desenvolvimento
+    public static string WebDevUrl2 = "http://localhost:3000";
 
     // URL principal de produção
     public static string WebProdUrl = "http://localhost:5002";

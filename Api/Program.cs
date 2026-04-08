@@ -14,7 +14,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using Npgsql;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -152,6 +151,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("CorsDev", policy => policy
         .WithOrigins(ConfigApp.WebDevUrl)
+        .WithOrigins(ConfigApp.WebDevUrl2)
         .WithOrigins(ConfigApp.WebProdUrl)
         .WithOrigins(ConfigApp.WebProd2Url)
         .AllowAnyHeader()
