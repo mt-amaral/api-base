@@ -1,6 +1,6 @@
 {
   "profiles": {
-    "https": {
+    "https:Development": {
       "commandName": "Project",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
@@ -9,7 +9,7 @@
       
       "applicationUrl": "https://localhost:8091;http://localhost:8090"
     },
-    "FistStart": {
+    "FistStart:Staging": {
       "commandName": "Project",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Staging"

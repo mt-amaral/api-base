@@ -32,6 +32,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Configurations\Setup\" />
     <Folder Include="Migrations\" />
   </ItemGroup>
 
