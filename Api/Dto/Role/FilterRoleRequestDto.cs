@@ -1,9 +1,9 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace Api.Dto.Role;
 
-public record FilterRoleRequestDto : PaginationRequestDto
+public class FilterRoleRequestDto : PaginationRequestDto
 {
     [StringLength(100, ErrorMessage = "SearchString deve ter no máximo 100 caracteres.")]
-    public string? SearchString { get; init; }
+    public string? SearchString { get; set; }
 }

@@ -1,12 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace Api.Dto.User;
 
-public record FilterUsersRequestDto : PaginationRequestDto
+public class FilterUsersRequestDto : PaginationRequestDto
 {
     [StringLength(100, ErrorMessage = "SearchString deve ter no máximo 100 caracteres.")]
-    public string? SearchString { get; init; }
+    public string? SearchString { get; set; }
 
     [Range(1, long.MaxValue, ErrorMessage = "RoleId inválido.")]
-    public long? RoleId { get; init; }
+    public long? RoleId { get; set; }
 }
