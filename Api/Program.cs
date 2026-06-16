@@ -1,78 +1,27 @@
 using Api.Configurations;
 using Api.Configurations.Identity;
+using Api.Configurations.Setup;
 using Api.Configurations.Seed;
 using Api.Configurations.Seed.Abstraction;
 using Api.Context;
 using Api.Dto;
-using Api.Entities.Identity;
 using Api.Middleware;
 using Api.Services;
 using Api.Services.Abstractions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.HttpOverrides;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using OpenTelemetry.Metrics;
-using OpenTelemetry.Resources;
-using OpenTelemetry.Trace;
-using Serilog;
-using System.Security.Claims;
-using System.Threading.RateLimiting;
-using OpenTelemetry.Logs;
 
 var builder = WebApplication.CreateBuilder(args);
 
 
-builder.Host.UseSerilog((context, config) =>
-{
-    config.ReadFrom.Configuration(context.Configuration)
-          .Enrich.WithProperty("Application", "api-base")
-          .Enrich.WithProperty("Environment", context.HostingEnvironment.EnvironmentName);
-
-    
-    if (context.HostingEnvironment.IsStaging() || context.HostingEnvironment.IsDevelopment())
-    {
-        config.WriteTo.OpenTelemetry(options =>
-        {
-            options.Endpoint = "http://otel-collector:4318"; 
-            options.Protocol = Serilog.Sinks.OpenTelemetry.OtlpProtocol.HttpProtobuf;
-            options.ResourceAttributes.Add("service.name", "api-base");
-        });
-    }
-});
+builder.AddSerilogSetup();
 
 builder.Services.AddHealthChecks();
-builder.Logging.AddOpenTelemetry(logging =>
-{
-    logging.IncludeFormattedMessage = true;
-    logging.IncludeScopes = true;
-    
-    logging.AddOtlpExporter(opt =>
-    {
-        opt.Endpoint = new Uri("http://otel-collector:4318"); // OTLP HTTP
-        opt.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf;
-    });
-});
 
-builder.Services.AddOpenTelemetry()
-    .ConfigureResource(resource => resource.AddService("api-base"))
-    .WithMetrics(metrics => metrics
-        .AddAspNetCoreInstrumentation()          // métricas de requisições HTTP
-        .AddHttpClientInstrumentation()          // métricas de chamadas HTTP
-        .AddRuntimeInstrumentation()             // métricas do .NET (GC, threads)
-        .AddPrometheusExporter())                
-    .WithTracing(tracing => tracing
-        .AddAspNetCoreInstrumentation()          // traces de requisições HTTP
-        .AddHttpClientInstrumentation()          // traces de chamadas HTTP
-        .AddEntityFrameworkCoreInstrumentation() // traces do EF Core
-        .SetSampler(new AlwaysOnSampler())       
-        .AddOtlpExporter(opt =>
-        {
-            opt.Endpoint = new Uri("http://otel-collector:4318"); // OTLP HTTP
-            opt.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf;
-        }));
+builder.AddOpenTelemetrySetup();
 
 // Services
 builder.Services.AddScoped<IAccountServices, AccountServices>();
@@ -97,55 +46,7 @@ if (!builder.Environment.IsDevelopment())
     });
 }
 
-builder.Services.AddRateLimiter(options =>
-{
-    // TODO fazer mais testes
-    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    options.AddPolicy("api", httpContext =>
-    {
-        string GetRealIp()
-        {
-            if (httpContext.Request.Headers.TryGetValue("X-Forwarded-For", out var forwardedFor))
-            {
-                var ip = forwardedFor.FirstOrDefault()?.Split(',').FirstOrDefault()?.Trim();
-                if (!string.IsNullOrEmpty(ip)) return ip;
-            }
-            return httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-        }
-
-        string key;
-        bool isAuthenticated = httpContext.User.Identity?.IsAuthenticated == true;
-
-        if (isAuthenticated)
-        {
-            var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
-            key = userId ?? GetRealIp();
-        }
-        else
-        {
-            var userAgent = httpContext.Request.Headers.UserAgent.ToString();
-            key = $"{GetRealIp()}:{userAgent}";
-        }
-
-        var permitLimit = isAuthenticated
-            ? ConfigApp.RateLimitPermitLimitAuthenticated
-            : ConfigApp.RateLimitPermitLimitAnonymous;
-
-        var queueLimit = isAuthenticated
-            ? ConfigApp.RateLimitQueueLimitAuthenticated
-            : ConfigApp.RateLimitQueueLimitAnonymous;
-
-        return RateLimitPartition.GetSlidingWindowLimiter(key, _ => new SlidingWindowRateLimiterOptions
-        {
-            PermitLimit = permitLimit,
-            Window = TimeSpan.FromSeconds(ConfigApp.RateLimitWindowSeconds),
-            SegmentsPerWindow = ConfigApp.RateLimitSegmentsPerWindow,
-            QueueProcessingOrder = ConfigApp.QueueProcessingOrder,
-            QueueLimit = queueLimit,
-            AutoReplenishment = true
-        });
-    });
-});
+builder.Services.AddRateLimiterSetup();
 
 builder.Services.AddCors(options =>
 {
@@ -166,60 +67,9 @@ builder.Services.AddCors(options =>
         .AllowCredentials());
 });
 
-builder.Services.AddIdentity<User, Role>(options =>
-{
-    options.Password.RequiredLength = ConfigApp.PasswordRequiredLength;
-    options.Password.RequiredUniqueChars = ConfigApp.PasswordRequiredUniqueChars;
-    options.SignIn.RequireConfirmedAccount = ConfigApp.RequireConfirmedAccount;
-    options.User.AllowedUserNameCharacters = ConfigApp.AllowedUserNameCharacters;
-    options.Lockout.MaxFailedAccessAttempts = ConfigApp.LockoutMaxFailedAccessAttempts;
-    options.Lockout.DefaultLockoutTimeSpan = ConfigApp.LockoutDefaultTimeSpan;
-    options.ClaimsIdentity.UserIdClaimType = ConfigApp.UserIdClaimType;
-    options.ClaimsIdentity.UserNameClaimType = ConfigApp.UserNameClaimType;
-    options.ClaimsIdentity.RoleClaimType = ConfigApp.RoleClaimType;
-})
-.AddEntityFrameworkStores<ApplicationDbContext>()
-.AddDefaultTokenProviders();
+builder.Services.AddIdentitySetup();
 
-builder.Services.ConfigureApplicationCookie(options =>
-{
-    options.LoginPath = "/Login";
-    options.LogoutPath = "/Logout";
-    options.Cookie.HttpOnly = true;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-    options.Cookie.SameSite = SameSiteMode.None;
-    options.SlidingExpiration = true;
-    options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
-    options.Events.OnRedirectToLogin = context =>
-    {
-        if (context.Request.Path.StartsWithSegments("/api"))
-        {
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            return Task.CompletedTask;
-        }
-        context.Response.Redirect(context.RedirectUri);
-        return Task.CompletedTask;
-    };
-    options.Events.OnRedirectToAccessDenied = context =>
-    {
-        if (context.Request.Path.StartsWithSegments("/api"))
-        {
-            context.Response.StatusCode = StatusCodes.Status403Forbidden;
-            return Task.CompletedTask;
-        }
-        context.Response.Redirect(context.RedirectUri);
-        return Task.CompletedTask;
-    };
-});
-
-builder.Services.AddAuthorization(options =>
-{
-    foreach (var permission in Permissions.GetPermissions())
-    {
-        options.AddPolicy(permission.PermissionName, policy =>
-            policy.RequireClaim(permission.ClaimType, permission.PermissionName));
-    }
-});
+builder.Services.AddAuthorizationSetup();
 
 builder.Services.AddControllers(options =>
 {
@@ -254,17 +104,7 @@ builder.Services.AddControllers(options =>
     };
 });
 
-builder.Services.AddSwaggerGen(c =>
-{
-    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
-    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-    c.IncludeXmlComments(xmlPath);
-    c.SwaggerDoc("v1", new()
-    {
-        Title = "Api Doc",
-        Description = ""
-    });
-});
+builder.Services.AddSwaggerSetup();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -297,26 +137,7 @@ if (app.Environment.IsStaging())
         c.InjectStylesheet("/swagger-ui/SwaggerDark.css");
     });
 
-    using (var scope = app.Services.CreateScope())
-    {
-        var services = scope.ServiceProvider;
-        try
-        {
-            var dbContext = services.GetRequiredService<ApplicationDbContext>();
-            await dbContext.Database.MigrateAsync();
-
-            var seeds = services.GetServices<IAppSeed>();
-            foreach (var seed in seeds)
-            {
-                await seed.SeedAsync(services);
-            }
-        }
-        catch (Exception ex)
-        {
-            var logger = services.GetRequiredService<ILogger<Program>>();
-            logger.LogError(ex, "Erro ao aplicar migrações ou seeds no ambiente Staging.");
-        }
-    }
+    await app.UseSeedSetupAsync();
 }
 
 app.UseRouting();
