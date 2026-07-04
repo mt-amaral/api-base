@@ -14,6 +14,7 @@ public interface IRoleService
         CancellationToken ct);
 
     Task<(Response<RoleResponseDto?>, short)> UpdateAsync(
+        long id,
         UpdateRoleRequestDto request,
         CancellationToken ct);
 

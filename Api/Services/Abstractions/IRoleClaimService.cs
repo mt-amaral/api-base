@@ -7,5 +7,5 @@ public interface IRoleClaimService
 {
     Task<(Response<RoleClaimResponseDto?>, short)> GetByRoleIdAsync(long roleId, CancellationToken ct);
 
-    Task<(Response<bool>, short)> UpdateAsync(UpdateRoleClaimRequestDto request, CancellationToken ct);
+    Task<(Response<bool>, short)> UpdateAsync(long roleId, UpdateRoleClaimRequestDto request, CancellationToken ct);
 }

@@ -6,11 +6,11 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Controllers.V1;
 
+[Route("api/v1/users")]
 public class UserController(IUserService userService) : BaseController
 {
 
     [HttpGet]
-    [Route("list-users")]
     [Authorize(Policy = Permissions.UsersView)]
     public async Task<IActionResult> ListUsers([FromQuery] FilterUsersRequestDto request, CancellationToken ct)
     {
@@ -19,7 +19,6 @@ public class UserController(IUserService userService) : BaseController
     }
 
     [HttpPost]
-    [Route("create")]
     [Authorize(Policy = Permissions.UsersRegister)]
     public async Task<IActionResult> Create([FromBody] CreateRequestDto request, CancellationToken ct)
     {
@@ -27,25 +26,22 @@ public class UserController(IUserService userService) : BaseController
         return StatusCode(status, data);
     }
 
-    [HttpPost]
-    [Route("update")]
+    [HttpPut("{id:long}")]
     [Authorize(Policy = Permissions.UsersUpdate)]
-    public async Task<IActionResult> Update([FromQuery] long UserId, [FromBody] UpdateUserRequestDto userRequest, CancellationToken ct)
+    public async Task<IActionResult> Update(long id, [FromBody] UpdateUserRequestDto userRequest, CancellationToken ct)
     {
-        var (data, status) = await userService.UpdateAsnc(UserId, userRequest, ct);
+        var (data, status) = await userService.UpdateAsnc(id, userRequest, ct);
         return StatusCode(status, data);
     }
 
-    [HttpPost]
-    [Route("update-logged")]
+    [HttpPut("me")]
     public async Task<IActionResult> UpdateUserLogged([FromBody] UpdateUserRequestDto userRequest, CancellationToken ct)
     {
         var (data, status) = await userService.UpdateLoggedAsnc(userRequest, ct);
         return StatusCode(status, data);
     }
 
-    [HttpDelete]
-    [Route("delete/{id:long}")]
+    [HttpDelete("{id:long}")]
     [Authorize(Policy = Permissions.UsersDelete)]
     public async Task<IActionResult> Delete(long id, CancellationToken ct)
     {

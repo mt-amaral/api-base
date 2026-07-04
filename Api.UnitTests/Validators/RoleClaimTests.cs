@@ -21,7 +21,6 @@ public class RoleClaimTests
         // Arrange
         var dto = new UpdateRoleClaimRequestDto
         {
-            RoleId = 1,
             Claims = new List<string> { "permission1", "permission2" }
         };
 
@@ -34,30 +33,11 @@ public class RoleClaimTests
     }
 
     [Fact]
-    public void UpdateRoleClaimRequestDto_RoleIdInvalido_MenorQueUm_DeveFalhar()
-    {
-        // Arrange
-        var dto = new UpdateRoleClaimRequestDto
-        {
-            RoleId = 0,
-            Claims = new List<string> { "permission1" }
-        };
-
-        // Act
-        var isValid = TryValidate(dto, out var results);
-
-        // Assert
-        Assert.False(isValid);
-        Assert.Contains(results, r => r.ErrorMessage == "RoleId inválido.");
-    }
-
-    [Fact]
     public void UpdateRoleClaimRequestDto_ClaimsNulas_DeveFalhar()
     {
         // Arrange
         var dto = new UpdateRoleClaimRequestDto
         {
-            RoleId = 1,
             Claims = null!
         };
 
@@ -75,7 +55,6 @@ public class RoleClaimTests
         // Arrange
         var dto = new UpdateRoleClaimRequestDto
         {
-            RoleId = 1,
             Claims = new List<string>()
         };
 
@@ -91,10 +70,7 @@ public class RoleClaimTests
     public void UpdateRoleClaimRequestDto_ClaimsInicializadasComListaVazia_DeveFalhar()
     {
         // Arrange
-        var dto = new UpdateRoleClaimRequestDto
-        {
-            RoleId = 1
-        };
+        var dto = new UpdateRoleClaimRequestDto();
 
         // Act
         var isValid = TryValidate(dto, out var results);

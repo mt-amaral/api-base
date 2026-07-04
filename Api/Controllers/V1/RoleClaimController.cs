@@ -6,23 +6,22 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Controllers.V1;
 
+[Route("api/v1/roles/{id:long}/claims")]
 public class RoleClaimController(IRoleClaimService roleClaimService) : BaseController
 {
     [HttpGet]
-    [Route("{roleId:long}")]
     [Authorize(Policy = Permissions.ClaimsView)]
-    public async Task<IActionResult> GetByRoleId(long roleId, CancellationToken ct)
+    public async Task<IActionResult> GetByRoleId(long id, CancellationToken ct)
     {
-        var (data, status) = await roleClaimService.GetByRoleIdAsync(roleId, ct);
+        var (data, status) = await roleClaimService.GetByRoleIdAsync(id, ct);
         return StatusCode(status, data);
     }
 
-    [HttpPost]
-    [Route("update")]
+    [HttpPut]
     [Authorize(Policy = Permissions.ClaimsUpdate)]
-    public async Task<IActionResult> Update([FromBody] UpdateRoleClaimRequestDto request, CancellationToken ct)
+    public async Task<IActionResult> Update(long id, [FromBody] UpdateRoleClaimRequestDto request, CancellationToken ct)
     {
-        var (data, status) = await roleClaimService.UpdateAsync(request, ct);
+        var (data, status) = await roleClaimService.UpdateAsync(id, request, ct);
         return StatusCode(status, data);
     }
 }

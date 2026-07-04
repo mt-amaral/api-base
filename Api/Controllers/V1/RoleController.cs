@@ -6,10 +6,10 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Controllers.V1;
 
+[Route("api/v1/roles")]
 public class RoleController(IRoleService roleService) : BaseController
 {
     [HttpGet]
-    [Route("list-roles")]
     [Authorize(Policy = Permissions.RolesView)]
     public async Task<IActionResult> ListRolesPage([FromQuery] FilterRoleRequestDto request, CancellationToken ct)
     {
@@ -17,8 +17,7 @@ public class RoleController(IRoleService roleService) : BaseController
         return StatusCode(status, data);
     }
 
-    [HttpGet]
-    [Route("list-all-roles")]
+    [HttpGet("summaries")]
     public async Task<IActionResult> ListRoles(CancellationToken ct)
     {
         var (data, status) = await roleService.ListAllRolesAsync(ct);
@@ -26,7 +25,6 @@ public class RoleController(IRoleService roleService) : BaseController
     }
 
     [HttpPost]
-    [Route("create")]
     [Authorize(Policy = Permissions.RolesRegister)]
     public async Task<IActionResult> Create([FromBody] CreateRoleRequestDto request, CancellationToken ct)
     {
@@ -34,17 +32,15 @@ public class RoleController(IRoleService roleService) : BaseController
         return StatusCode(status, data);
     }
 
-    [HttpPost]
-    [Route("update")]
+    [HttpPut("{id:long}")]
     [Authorize(Policy = Permissions.RolesUpdate)]
-    public async Task<IActionResult> Update([FromBody] UpdateRoleRequestDto request, CancellationToken ct)
+    public async Task<IActionResult> Update(long id, [FromBody] UpdateRoleRequestDto request, CancellationToken ct)
     {
-        var (data, status) = await roleService.UpdateAsync(request, ct);
+        var (data, status) = await roleService.UpdateAsync(id, request, ct);
         return StatusCode(status, data);
     }
 
-    [HttpDelete]
-    [Route("delete/{id:long}")]
+    [HttpDelete("{id:long}")]
     [Authorize(Policy = Permissions.RolesDelete)]
     public async Task<IActionResult> Delete(long id, CancellationToken ct)
     {

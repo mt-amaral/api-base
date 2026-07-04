@@ -111,12 +111,12 @@ public class RoleServices(ApplicationDbContext context) : IRoleService
         }
     }
 
-    public async Task<(Response<RoleResponseDto?>, short)> UpdateAsync(UpdateRoleRequestDto request, CancellationToken ct)
+    public async Task<(Response<RoleResponseDto?>, short)> UpdateAsync(long id, UpdateRoleRequestDto request, CancellationToken ct)
     {
         try
         {
             var role = await context.Roles
-                .FirstOrDefaultAsync(r => r.Id == request.Id, ct);
+                .FirstOrDefaultAsync(r => r.Id == id, ct);
 
             if (role is null)
             {
@@ -127,7 +127,7 @@ public class RoleServices(ApplicationDbContext context) : IRoleService
 
             var duplicateRole = await context.Roles
                 .AsNoTracking()
-                .AnyAsync(r => r.Id != request.Id && r.NormalizedName == normalizedName, ct);
+                .AnyAsync(r => r.Id != id && r.NormalizedName == normalizedName, ct);
 
             if (duplicateRole)
             {

@@ -53,13 +53,13 @@ public class RoleClaimService(ApplicationDbContext context) : IRoleClaimService
         }
     }
 
-    public async Task<(Response<bool>, short)> UpdateAsync(UpdateRoleClaimRequestDto request, CancellationToken ct)
+    public async Task<(Response<bool>, short)> UpdateAsync(long roleId, UpdateRoleClaimRequestDto request, CancellationToken ct)
     {
         try
         {
             var roleExists = await context.Roles
                 .AsNoTracking()
-                .AnyAsync(r => r.Id == request.RoleId, ct);
+                .AnyAsync(r => r.Id == roleId, ct);
 
             if (!roleExists)
             {
@@ -87,7 +87,7 @@ public class RoleClaimService(ApplicationDbContext context) : IRoleClaimService
             }
 
             var existingClaims = await context.Set<RoleClaim>()
-                .Where(rc => rc.RoleId == request.RoleId && rc.ClaimType == Permissions.Permission)
+                .Where(rc => rc.RoleId == roleId && rc.ClaimType == Permissions.Permission)
                 .ToListAsync(ct);
 
             context.RemoveRange(existingClaims);
@@ -99,7 +99,7 @@ public class RoleClaimService(ApplicationDbContext context) : IRoleClaimService
             var newClaims = requestedClaims
                 .Select(claim => new RoleClaim
                 {
-                    RoleId = request.RoleId,
+                    RoleId = roleId,
                     ClaimType = Permissions.Permission,
                     ClaimValue = claim
                 })

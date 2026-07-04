@@ -234,7 +234,6 @@ public class RoleTests
         // Arrange
         var dto = new UpdateRoleRequestDto
         {
-            Id = 1,
             Name = "Administrador",
             Description = "Perfil com acesso total ao sistema."
         };
@@ -248,31 +247,11 @@ public class RoleTests
     }
 
     [Fact]
-    public void UpdateRoleRequestDto_IdInvalido_MenorQueUm_DeveFalhar()
-    {
-        // Arrange
-        var dto = new UpdateRoleRequestDto
-        {
-            Id = 0,
-            Name = "Administrador",
-            Description = "Descrição válida"
-        };
-
-        // Act
-        var isValid = TryValidate(dto, out var results);
-
-        // Assert
-        Assert.False(isValid);
-        Assert.Contains(results, r => r.ErrorMessage == "Id inválido.");
-    }
-
-    [Fact]
     public void UpdateRoleRequestDto_NomeObrigatorio_DeveFalhar()
     {
         // Arrange
         var dto = new UpdateRoleRequestDto
         {
-            Id = 1,
             Name = null!,
             Description = "Descrição válida"
         };
@@ -291,7 +270,6 @@ public class RoleTests
         // Arrange
         var dto = new UpdateRoleRequestDto
         {
-            Id = 1,
             Name = new string('A', 101),
             Description = "Descrição válida"
         };
@@ -310,7 +288,6 @@ public class RoleTests
         // Arrange
         var dto = new UpdateRoleRequestDto
         {
-            Id = 1,
             Name = "Perfil Teste",
             Description = null!
         };
@@ -329,7 +306,6 @@ public class RoleTests
         // Arrange
         var dto = new UpdateRoleRequestDto
         {
-            Id = 1,
             Name = "Perfil Teste",
             Description = new string('B', 256)
         };
