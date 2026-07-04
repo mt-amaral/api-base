@@ -1,4 +1,4 @@
-# API de autenticação .net 9.0 
+# API de autenticação .net 9.0
 
 API em ASP.NET Core com foco em autenticação usando **ASP.NET Identity**, **cookie auth** e **refresh token**.
 
@@ -13,6 +13,10 @@ A ideia do projeto é manter tudo simples, organizado e com um padrão bem defin
 - **Mappings do Identity** separados para controlar tamanho de campos, nomes de tabela e afins
 - **ConfigApp** centralizando parâmetros estáticos da aplicação
 - **ExceptionMiddleware** para capturar erro inesperado e devolver no padrão da API
+
+![API Swagger overview](docs/images/zzz.png)
+
+![API Swagger resources](docs/images/zzz1.png)
 
 ## Autenticação
 
@@ -45,7 +49,6 @@ Para paginação, usa `PagedResponse<T>` com:
 
 Mantenha sempre esse padrão! E envolva as respostas da API com ele.
 
-
 ## Seed inicial
 
 Se você iniciar o projeto como Staging, ele irá gerar as migrations e popular um usuário de teste (Lembre-se de trocar o usuário/senha em produção).
@@ -53,15 +56,14 @@ Você pode usar esse endpoint para criar um usuário inicial:
 
 - nome: `Admin`
 - email: `admin@teste.com`
-- Vai encontrar a senha do Admin senha dentro de ``Configurations/Seed/AdminUserSeed``
-
+- Vai encontrar a senha do Admin senha dentro de `Configurations/Seed/AdminUserSeed`
 
 ### Api.UnitTests (xUnit)
 
 O teste está bem simples, só para garantir a validação dos requests das controllers (Input Model Validation), conforme as regras forem definidas
 Seria interessante criar teste nos principais métodos de serviços.
 
-Rodar testes: 
+Rodar testes:
 **dotnet test**
 
 ## Observações
@@ -75,4 +77,5 @@ o objetivo é ser simples e pratico:
 - monolito significado
 
 ## Banco
-- docker run --name postgres -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=postgres -p 5432:5432  -d postgres
+
+- docker run --name postgres -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=postgres -p 5432:5432 -d postgres
