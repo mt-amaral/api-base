@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
+using System.Text;
 
 public class AccountServices(
     UserManager<User> userManager,
@@ -28,8 +29,11 @@ public class AccountServices(
             if (user is null)
                 return (new Response<LoginResponseDto?>(null, "Credenciais inválidas"), 400);
 
-            var validPassword = await userManager.CheckPasswordAsync(user, request.Password);
-            if (!validPassword)
+            var signInResult = await signInMannger.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: true);
+            if (signInResult.IsLockedOut)
+                return (new Response<LoginResponseDto?>(null, "Usuário bloqueado por excesso de tentativas. Tente novamente mais tarde."), 423);
+
+            if (!signInResult.Succeeded)
                 return (new Response<LoginResponseDto?>(null, "Credenciais inválidas"), 400);
 
             await signInMannger.SignInAsync(user, new AuthenticationProperties
@@ -46,12 +50,12 @@ public class AccountServices(
 
             if (storedRefreshToken is null)
             {
-                storedRefreshToken = new RefreshToken(newRefreshToken, user.Id);
+                storedRefreshToken = new RefreshToken(HashRefreshToken(newRefreshToken), user.Id);
                 await context.RefreshToken.AddAsync(storedRefreshToken, ct);
             }
             else
             {
-                storedRefreshToken.Replace(newRefreshToken);
+                storedRefreshToken.Replace(HashRefreshToken(newRefreshToken));
             }
 
             var ipAddress = httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString();
@@ -116,15 +120,16 @@ public class AccountServices(
             if (!httpContext.Request.Cookies.TryGetValue(ConfigApp.RefreshTokenCookieName, out var currentRefreshToken))
                 return (new Response<string?>(null, "Refresh token não encontrado"), 401);
 
+            var currentTokenHash = HashRefreshToken(currentRefreshToken);
             var storedToken = await context.RefreshToken
                 .Include(x => x.User)
-                .FirstOrDefaultAsync(x => x.Token == currentRefreshToken, ct);
+                .FirstOrDefaultAsync(x => x.Token == currentTokenHash, ct);
 
             if (storedToken is null || !storedToken.IsActive)
                 return (new Response<string?>(null, "Refresh token inválido ou expirado"), 401);
 
             var newRefreshToken = GenerateRefreshToken();
-            storedToken.Replace(newRefreshToken);
+            storedToken.Replace(HashRefreshToken(newRefreshToken));
 
             var ipAddress = httpContext.Connection.RemoteIpAddress?.ToString();
             var userAgent = httpContext.Request.Headers.UserAgent.ToString();
@@ -170,8 +175,9 @@ public class AccountServices(
             if (httpContext != null &&
                 httpContext.Request.Cookies.TryGetValue(ConfigApp.RefreshTokenCookieName, out var refreshToken))
             {
+                var tokenHash = HashRefreshToken(refreshToken);
                 var storedToken = await context.RefreshToken
-                    .FirstOrDefaultAsync(x => x.Token == refreshToken, ct);
+                    .FirstOrDefaultAsync(x => x.Token == tokenHash, ct);
 
                 if (storedToken != null && storedToken.IsActive)
                 {
@@ -246,6 +252,9 @@ public class AccountServices(
         var randomBytes = RandomNumberGenerator.GetBytes(64);
         return Convert.ToBase64String(randomBytes);
     }
+
+    private static string HashRefreshToken(string refreshToken) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(refreshToken)));
 
     private void AppendRefreshTokenCookie(string refreshToken)
     {

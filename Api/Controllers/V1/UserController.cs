@@ -35,7 +35,7 @@ public class UserController(IUserService userService) : BaseController
     }
 
     [HttpPut("me")]
-    public async Task<IActionResult> UpdateUserLogged([FromBody] UpdateUserRequestDto userRequest, CancellationToken ct)
+    public async Task<IActionResult> UpdateUserLogged([FromBody] UpdateLoggedUserRequestDto userRequest, CancellationToken ct)
     {
         var (data, status) = await userService.UpdateLoggedAsnc(userRequest, ct);
         return StatusCode(status, data);

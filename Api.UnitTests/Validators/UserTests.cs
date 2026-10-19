@@ -668,4 +668,56 @@ public class UserTests
     }
 
     #endregion
+
+    #region UpdateLoggedUserRequestDto Tests
+
+    [Fact]
+    public void UpdateLoggedUserRequestDto_ComDadosValidos_DeveSerValido()
+    {
+        // Arrange
+        var dto = new UpdateLoggedUserRequestDto
+        {
+            UserName = "joaosilva",
+            Email = "joao@email.com",
+            CurrentPassword = "senhaAtual1",
+            NewPassword = "123456",
+            ConfirmPassword = "123456"
+        };
+
+        // Act
+        var isValid = TryValidate(dto, out var results);
+
+        // Assert
+        Assert.True(isValid);
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public void UpdateLoggedUserRequestDto_NaoPossuiRoleId()
+    {
+        Assert.Null(typeof(UpdateLoggedUserRequestDto).GetProperty("RoleId"));
+    }
+
+    [Fact]
+    public void UpdateLoggedUserRequestDto_ConfirmPasswordDiferente_DeveFalhar()
+    {
+        // Arrange
+        var dto = new UpdateLoggedUserRequestDto
+        {
+            UserName = "joaosilva",
+            Email = "joao@email.com",
+            CurrentPassword = "senhaAtual1",
+            NewPassword = "123456",
+            ConfirmPassword = "654321"
+        };
+
+        // Act
+        var isValid = TryValidate(dto, out var results);
+
+        // Assert
+        Assert.False(isValid);
+        Assert.Contains(results, r => r.ErrorMessage == "ConfirmPassword deve ser igual a NewPassword.");
+    }
+
+    #endregion
 }

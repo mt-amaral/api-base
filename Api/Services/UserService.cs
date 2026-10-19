@@ -127,7 +127,29 @@ public class UserService(ApplicationDbContext context,
             if (entity == null)
                 return (new Response<UserResponseDto?>(null, "Usuário não encontrado"), 404);
 
-            return await UpdateUserAsync(entity, userRequest, ct);
+            if (!await RoleExistsAsync(userRequest.RoleId, ct))
+                return (new Response<UserResponseDto?>(null, "Perfil não encontrado"), 400);
+
+            await using var transaction = await context.Database.BeginTransactionAsync(ct);
+
+            var userResult = await UpdateUserDataAsync(entity, userRequest.UserName, userRequest.Email);
+            if (userResult is not null)
+                return userResult.Value;
+
+            if (!string.IsNullOrWhiteSpace(userRequest.NewPassword))
+            {
+                var token = await userManager.GeneratePasswordResetTokenAsync(entity);
+                var passwordResult = await userManager.ResetPasswordAsync(entity, token, userRequest.NewPassword);
+                if (!passwordResult.Succeeded)
+                    return (new Response<UserResponseDto?>(null, JoinErrors(passwordResult)), 400);
+            }
+
+            await ReplaceRoleAsync(entity.Id, userRequest.RoleId, ct);
+
+            await context.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+
+            return await BuildUpdatedResponseAsync(entity, ct);
         }
         catch
         {
@@ -135,13 +157,31 @@ public class UserService(ApplicationDbContext context,
         }
     }
 
-    public async Task<(Response<UserResponseDto?>, short)> UpdateLoggedAsnc(UpdateUserRequestDto request, CancellationToken ct)
+    public async Task<(Response<UserResponseDto?>, short)> UpdateLoggedAsnc(UpdateLoggedUserRequestDto request, CancellationToken ct)
     {
         try
         {
             var entity = await userLoggedService.GetUserLoggedAsync();
 
-            return await UpdateUserAsync(entity, request, ct);
+            await using var transaction = await context.Database.BeginTransactionAsync(ct);
+
+            var userResult = await UpdateUserDataAsync(entity, request.UserName, request.Email);
+            if (userResult is not null)
+                return userResult.Value;
+
+            if (!string.IsNullOrWhiteSpace(request.NewPassword))
+            {
+                if (string.IsNullOrWhiteSpace(request.CurrentPassword))
+                    return (new Response<UserResponseDto?>(null, "Senha atual é obrigatória para trocar a senha."), 400);
+
+                var passwordResult = await userManager.ChangePasswordAsync(entity, request.CurrentPassword, request.NewPassword);
+                if (!passwordResult.Succeeded)
+                    return (new Response<UserResponseDto?>(null, JoinErrors(passwordResult)), 400);
+            }
+
+            await transaction.CommitAsync(ct);
+
+            return await BuildUpdatedResponseAsync(entity, ct);
         }
         catch
         {
@@ -149,29 +189,20 @@ public class UserService(ApplicationDbContext context,
         }
     }
 
-    private async Task<(Response<UserResponseDto?>, short)> UpdateUserAsync(
-        User entity,
-        UpdateUserRequestDto userRequest,
-        CancellationToken ct)
+    private async Task<(Response<UserResponseDto?>, short)?> UpdateUserDataAsync(User entity, string userName, string email)
     {
-        entity.UserName = userRequest.UserName;
-        entity.Email = userRequest.Email;
+        entity.UserName = userName;
+        entity.Email = email;
 
         var updateUserResult = await userManager.UpdateAsync(entity);
-        if (!updateUserResult.Succeeded)
-        {
-            var errorMessage = string.Join(" | ", updateUserResult.Errors.Select(x => x.Description));
-            return (new Response<UserResponseDto?>(null, errorMessage), 400);
-        }
+        if (updateUserResult.Succeeded)
+            return null;
 
-        var passwordResult = await UpdatePasswordIfNeededAsync(entity, userRequest);
-        if (passwordResult is not null)
-            return passwordResult.Value;
+        return (new Response<UserResponseDto?>(null, JoinErrors(updateUserResult)), 400);
+    }
 
-        var roleResult = await UpdateRoleIfNeededAsync(entity.Id, userRequest.RoleId, ct);
-        if (roleResult is not null)
-            return roleResult.Value;
-
+    private async Task<(Response<UserResponseDto?>, short)> BuildUpdatedResponseAsync(User entity, CancellationToken ct)
+    {
         var roleId = await context.Set<IdentityUserRole<long>>()
             .AsNoTracking()
             .Where(x => x.UserId == entity.Id)
@@ -187,6 +218,9 @@ public class UserService(ApplicationDbContext context,
 
         return (new Response<UserResponseDto?>(response, $"Usuário {response.Name} atualizado com sucesso"), 200);
     }
+
+    private static string JoinErrors(IdentityResult result) =>
+        string.Join(" | ", result.Errors.Select(x => x.Description));
 
 
     public async Task<(Response<bool>, short)> DeleteAsync(long userId, CancellationToken ct)
@@ -213,50 +247,22 @@ public class UserService(ApplicationDbContext context,
     }
 
 
-    private async Task<(Response<UserResponseDto?>, short)?> UpdateRoleIfNeededAsync(
-        long userId,
-        long? roleId,
-        CancellationToken ct)
+    private async Task ReplaceRoleAsync(long userId, long roleId, CancellationToken ct)
     {
-        if (!roleId.HasValue || roleId.Value <= 0)
-            return null;
-
-        var roleExists = await RoleExistsAsync(roleId.Value, ct);
-        if (!roleExists)
-            return (new Response<UserResponseDto?>(null, "Perfil não encontrado"), 400);
-
         var userRoles = await context.Set<IdentityUserRole<long>>()
             .Where(x => x.UserId == userId)
             .ToListAsync(ct);
 
-        if (userRoles.Count > 0)
-            context.RemoveRange(userRoles);
+        if (userRoles.Count == 1 && userRoles[0].RoleId == roleId)
+            return;
 
+        context.RemoveRange(userRoles);
         context.Add(new IdentityUserRole<long>
         {
             UserId = userId,
-            RoleId = roleId.Value
+            RoleId = roleId
         });
-
-        return null;
     }
-
-    private async Task<(Response<UserResponseDto?>, short)?> UpdatePasswordIfNeededAsync(
-        User entity,
-        UpdateUserRequestDto userRequest)
-    {
-        if (string.IsNullOrWhiteSpace(userRequest.NewPassword))
-            return null;
-
-        var token = await userManager.GeneratePasswordResetTokenAsync(entity);
-        var passwordResult = await userManager.ResetPasswordAsync(entity, token, userRequest.NewPassword);
-
-        if (passwordResult.Succeeded)
-            return null;
-
-        return (new Response<UserResponseDto?>(null, "Erro ao atualizar senha"), 400);
-    }
-
 
     private async Task<bool> RoleExistsAsync(long roleId, CancellationToken ct)
     {
