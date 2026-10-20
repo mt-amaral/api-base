@@ -29,9 +29,9 @@ public static class IdentitySetup
             options.LogoutPath = "/Logout";
             options.Cookie.HttpOnly = true;
             options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-            options.Cookie.SameSite = SameSiteMode.None;
+            options.Cookie.SameSite = ConfigApp.CookieSameSite;
             options.SlidingExpiration = true;
-            options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
+            options.ExpireTimeSpan = TimeSpan.FromMinutes(ConfigApp.TokenCookieTime);
             options.Events.OnRedirectToLogin = context =>
             {
                 if (context.Request.Path.StartsWithSegments("/api"))

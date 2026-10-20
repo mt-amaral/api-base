@@ -4,6 +4,6 @@ public record LoginResponseDto(
     long Id,
     string Name,
     string Email,
-    long RoleId,
+    long? RoleId,
     List<string>? Claims
 );

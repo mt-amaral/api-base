@@ -39,8 +39,7 @@ public class AccountServices(
             await signInMannger.SignInAsync(user, new AuthenticationProperties
             {
                 IsPersistent = request.RememberMe,
-                AllowRefresh = true,
-                ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(ConfigApp.TokenCookieTime)
+                AllowRefresh = true
             });
 
             var newRefreshToken = GenerateRefreshToken();
@@ -78,28 +77,7 @@ public class AccountServices(
 
             AppendRefreshTokenCookie(newRefreshToken);
 
-            var userRoles = await context.Set<IdentityUserRole<long>>()
-                .Where(x => x.UserId == user.Id)
-                .ToListAsync(ct);
-
-            var roleId = userRoles
-                .Select(x => x.RoleId)
-                .FirstOrDefault();
-
-            var claims = await context.Set<RoleClaim>()
-                .Where(rc => userRoles.Select(ur => ur.RoleId).Contains(rc.RoleId))
-                .Select(rc => rc.ClaimValue!)
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .Distinct()
-                .ToListAsync(ct);
-
-            var response = new LoginResponseDto(
-                user.Id,
-                user.UserName!,
-                user.Email!,
-                roleId,
-                claims
-            );
+            var response = await BuildLoginResponseAsync(user, ct);
 
             return (new Response<LoginResponseDto?>(response, null), 200);
         }
@@ -150,8 +128,7 @@ public class AccountServices(
             await signInMannger.SignInAsync(storedToken.User, new AuthenticationProperties
             {
                 IsPersistent = true,
-                AllowRefresh = true,
-                ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(ConfigApp.TokenCookieTime)
+                AllowRefresh = true
             });
 
             await context.SaveChangesAsync(ct);
@@ -196,7 +173,7 @@ public class AccountServices(
                 }
 
                 await context.SaveChangesAsync(ct);
-                httpContext.Response.Cookies.Delete(ConfigApp.RefreshTokenCookieName);
+                httpContext.Response.Cookies.Delete(ConfigApp.RefreshTokenCookieName, RefreshTokenCookieOptions());
             }
 
             await signInMannger.SignOutAsync();
@@ -216,28 +193,7 @@ public class AccountServices(
         {
             var user = await userLoggedService.GetUserLoggedAsync();
 
-            var userRoles = await context.Set<IdentityUserRole<long>>()
-                .Where(x => x.UserId == user.Id)
-                .ToListAsync(ct);
-
-            var roleId = userRoles
-                .Select(x => x.RoleId)
-                .FirstOrDefault();
-
-            var claims = await context.Set<RoleClaim>()
-                .Where(rc => userRoles.Select(ur => ur.RoleId).Contains(rc.RoleId))
-                .Select(rc => rc.ClaimValue!)
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .Distinct()
-                .ToListAsync(ct);
-
-            var response = new LoginResponseDto(
-                user.Id,
-                user.UserName!,
-                user.Email!,
-                roleId,
-                claims
-            );
+            var response = await BuildLoginResponseAsync(user, ct);
 
             return (new Response<LoginResponseDto?>(response, null), 200);
         }
@@ -245,6 +201,33 @@ public class AccountServices(
         {
             return (new Response<LoginResponseDto?>(null, "Erro ao buscar usuário logado"), 500);
         }
+    }
+
+    private async Task<LoginResponseDto> BuildLoginResponseAsync(User user, CancellationToken ct)
+    {
+        // Um perfil por usuário: mesma regra de ordenação usada em UserService
+        var roleId = await context.Set<IdentityUserRole<long>>()
+            .AsNoTracking()
+            .Where(x => x.UserId == user.Id)
+            .OrderBy(x => x.RoleId)
+            .Select(x => (long?)x.RoleId)
+            .FirstOrDefaultAsync(ct);
+
+        var claims = await context.Set<RoleClaim>()
+            .AsNoTracking()
+            .Where(rc => rc.RoleId == roleId)
+            .Select(rc => rc.ClaimValue!)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct()
+            .ToListAsync(ct);
+
+        return new LoginResponseDto(
+            user.Id,
+            user.UserName!,
+            user.Email!,
+            roleId,
+            claims
+        );
     }
 
     private static string GenerateRefreshToken()
@@ -261,13 +244,17 @@ public class AccountServices(
         var httpContext = httpContextAccessor.HttpContext;
         if (httpContext is null) return;
 
-        httpContext.Response.Cookies.Append(ConfigApp.RefreshTokenCookieName, refreshToken, new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = true,
-            SameSite = SameSiteMode.Strict,
-            Expires = DateTimeOffset.UtcNow.AddMinutes(ConfigApp.RefreshTokenCookieTime)
-        });
+        var options = RefreshTokenCookieOptions();
+        options.Expires = DateTimeOffset.UtcNow.AddMinutes(ConfigApp.RefreshTokenCookieTime);
+
+        httpContext.Response.Cookies.Append(ConfigApp.RefreshTokenCookieName, refreshToken, options);
     }
+
+    private static CookieOptions RefreshTokenCookieOptions() => new()
+    {
+        HttpOnly = true,
+        Secure = true,
+        SameSite = ConfigApp.CookieSameSite
+    };
 
 }

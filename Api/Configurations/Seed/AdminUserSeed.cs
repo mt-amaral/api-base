@@ -30,6 +30,18 @@ public sealed class AdminUserSeed : IAppSeed
 
         if (!await userManager.IsInRoleAsync(user, Permissions.Admin))
         {
+            // Um perfil por usuário: tira o atual antes de vincular Admin
+            var currentRoles = await userManager.GetRolesAsync(user);
+            if (currentRoles.Count > 0)
+            {
+                var removeResult = await userManager.RemoveFromRolesAsync(user, currentRoles);
+                if (!removeResult.Succeeded)
+                {
+                    var errors = string.Join("; ", removeResult.Errors.Select(e => e.Description));
+                    throw new Exception($"Erro ao remover perfis atuais do admin: {errors}");
+                }
+            }
+
             var addToRoleResult = await userManager.AddToRoleAsync(user, Permissions.Admin);
             if (!addToRoleResult.Succeeded)
             {

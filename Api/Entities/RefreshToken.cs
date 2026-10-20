@@ -1,4 +1,5 @@
-﻿using Api.Entities.Identity;
+﻿using Api.Configurations;
+using Api.Entities.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -15,7 +16,7 @@ public class RefreshToken
         Token = token;
         UserId = userId;
         CreatedAtUtc = DateTime.UtcNow;
-        ExpiresAtUtc = DateTime.UtcNow.AddDays(7);
+        ExpiresAtUtc = DateTime.UtcNow.AddMinutes(ConfigApp.RefreshTokenCookieTime);
     }
 
     public long Id { get; init; }
@@ -52,7 +53,7 @@ public class RefreshToken
     {
         Token = newToken;
         CreatedAtUtc = DateTime.UtcNow;
-        ExpiresAtUtc = DateTime.UtcNow.AddDays(7);
+        ExpiresAtUtc = DateTime.UtcNow.AddMinutes(ConfigApp.RefreshTokenCookieTime);
         RevokedAtUtc = null;
     }
 }

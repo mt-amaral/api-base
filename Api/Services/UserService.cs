@@ -16,17 +16,20 @@ public class UserService(ApplicationDbContext context,
     {
         try
         {
+            // Subquery em vez de join: usuário sem perfil continua na lista e nunca duplica linha
             var query =
                 from u in context.User.AsNoTracking()
-                join ur in context.Set<IdentityUserRole<long>>().AsNoTracking()
-                    on u.Id equals ur.UserId
                 orderby u.Id
                 select new
                 {
                     u.Id,
                     Name = u.UserName!,
                     Email = u.Email!,
-                    ur.RoleId
+                    RoleId = context.Set<IdentityUserRole<long>>()
+                        .Where(ur => ur.UserId == u.Id)
+                        .OrderBy(ur => ur.RoleId)
+                        .Select(ur => (long?)ur.RoleId)
+                        .FirstOrDefault()
                 };
 
             if (!string.IsNullOrWhiteSpace(request.SearchString))
@@ -90,17 +93,17 @@ public class UserService(ApplicationDbContext context,
 
             var user = new User(userName: request.UserName, email: request.Email);
 
+            // UserManager usa o mesmo DbContext: usuário e perfil gravam juntos ou nada grava
+            await using var transaction = await context.Database.BeginTransactionAsync(ct);
+
             var statusCreate = await userManager.CreateAsync(user, request.NewPassword);
             if (!statusCreate.Succeeded)
                 return (new Response<UserResponseDto?>(null, $"Erro ao criar usuário {user.UserName}"), 400);
 
-            context.Add(new IdentityUserRole<long>
-            {
-                UserId = user.Id,
-                RoleId = request.RoleId
-            });
+            await ReplaceRoleAsync(user.Id, request.RoleId, ct);
 
             await context.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
 
             var response = new UserResponseDto(
                 user.Id,
@@ -206,7 +209,8 @@ public class UserService(ApplicationDbContext context,
         var roleId = await context.Set<IdentityUserRole<long>>()
             .AsNoTracking()
             .Where(x => x.UserId == entity.Id)
-            .Select(x => x.RoleId)
+            .OrderBy(x => x.RoleId)
+            .Select(x => (long?)x.RoleId)
             .FirstOrDefaultAsync(ct);
 
         var response = new UserResponseDto(
@@ -247,6 +251,7 @@ public class UserService(ApplicationDbContext context,
     }
 
 
+    // Regra do sistema: um perfil por usuário. Toda escrita de perfil passa por aqui.
     private async Task ReplaceRoleAsync(long userId, long roleId, CancellationToken ct)
     {
         var userRoles = await context.Set<IdentityUserRole<long>>()

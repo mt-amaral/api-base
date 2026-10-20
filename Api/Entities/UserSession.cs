@@ -1,4 +1,5 @@
-﻿using Api.Entities.Identity;
+﻿using Api.Configurations;
+using Api.Entities.Identity;
 using Microsoft.EntityFrameworkCore;
 
 [Index(nameof(UserId), IsUnique = true)]
@@ -27,13 +28,13 @@ public class UserSession
         UserAgent = userAgent;
         CreatedAtUtc = DateTime.UtcNow;
         LastAccessAtUtc = DateTime.UtcNow;
-        ExpiresAtUtc = DateTime.UtcNow.AddDays(7);
+        ExpiresAtUtc = DateTime.UtcNow.AddMinutes(ConfigApp.RefreshTokenCookieTime);
     }
 
     public void Refresh(string? ipAddress, string? userAgent)
     {
         LastAccessAtUtc = DateTime.UtcNow;
-        ExpiresAtUtc = DateTime.UtcNow.AddDays(7);
+        ExpiresAtUtc = DateTime.UtcNow.AddMinutes(ConfigApp.RefreshTokenCookieTime);
         RevokedAtUtc = null;
         IpAddress = ipAddress;
         UserAgent = userAgent;
