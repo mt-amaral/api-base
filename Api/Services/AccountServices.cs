@@ -15,7 +15,8 @@ public class AccountServices(
     SignInManager<User> signInMannger,
     ApplicationDbContext context,
     IHttpContextAccessor httpContextAccessor,
-    IUserLoggedService userLoggedService) : IAccountServices
+    IUserLoggedService userLoggedService,
+    ILogger<AccountServices> logger) : IAccountServices
 {
 
 
@@ -81,8 +82,9 @@ public class AccountServices(
 
             return (new Response<LoginResponseDto?>(response, null), 200);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Erro ao realizar login para {Email}", request.Email);
             return (new Response<LoginResponseDto?>(null, "Erro interno ao realizar login"), 500);
         }
     }
@@ -137,8 +139,9 @@ public class AccountServices(
 
             return (new Response<string?>(null, null), 200);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Erro ao renovar sessão");
             return (new Response<string?>(null, "Erro ao renovar sessão"), 500);
         }
     }
@@ -180,8 +183,9 @@ public class AccountServices(
 
             return (new Response<string?>(null, null), 200);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Erro ao realizar logout");
             return (new Response<string?>(null, "Erro ao realizar logout"), 500);
         }
     }
@@ -197,8 +201,9 @@ public class AccountServices(
 
             return (new Response<LoginResponseDto?>(response, null), 200);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Erro ao buscar usuário logado");
             return (new Response<LoginResponseDto?>(null, "Erro ao buscar usuário logado"), 500);
         }
     }

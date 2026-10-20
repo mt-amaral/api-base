@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.Services;
 
-public class RoleClaimService(ApplicationDbContext context) : IRoleClaimService
+public class RoleClaimService(ApplicationDbContext context, ILogger<RoleClaimService> logger) : IRoleClaimService
 {
     public async Task<(Response<RoleClaimResponseDto?>, short)> GetByRoleIdAsync(long roleId, CancellationToken ct)
     {
@@ -47,8 +47,9 @@ public class RoleClaimService(ApplicationDbContext context) : IRoleClaimService
 
             return (new Response<RoleClaimResponseDto?>(response, null), 200);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Erro ao recuperar claims da role {RoleId}", roleId);
             return (new Response<RoleClaimResponseDto?>(null, "Erro ao recuperar claims da role."), 500);
         }
     }
@@ -110,8 +111,9 @@ public class RoleClaimService(ApplicationDbContext context) : IRoleClaimService
 
             return (new Response<bool>(true, "Permissões atualizadas com sucesso."), 200);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Erro ao atualizar claims da role {RoleId}", roleId);
             return (new Response<bool>(false, "Erro ao atualizar permissões"), 500);
         }
     }

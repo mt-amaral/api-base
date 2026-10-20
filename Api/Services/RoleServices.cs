@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.Services;
 
-public class RoleServices(ApplicationDbContext context) : IRoleService
+public class RoleServices(ApplicationDbContext context, ILogger<RoleServices> logger) : IRoleService
 {
     public async Task<(PagedResponse<List<GetAllRoleResponseDto>?>, short)> ListRolesPageAsync(FilterRoleRequestDto request, CancellationToken ct)
     {
@@ -43,8 +43,9 @@ public class RoleServices(ApplicationDbContext context) : IRoleService
                 200
             );
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Erro ao listar perfis");
             return (
                 new PagedResponse<List<GetAllRoleResponseDto>?>(null, 0, request.PageNumber, request.PageSize, "Erro ao listar Perfis!"),
                 500
@@ -64,8 +65,9 @@ public class RoleServices(ApplicationDbContext context) : IRoleService
             }
             return (new Response<List<RoleResponseDto>?>(result, null), 200);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Erro ao listar perfis");
             return (new Response<List<RoleResponseDto>?>(null, $"Erro ao listar Perfis!"), 500);
         }
     }
@@ -105,8 +107,9 @@ public class RoleServices(ApplicationDbContext context) : IRoleService
 
             return (new Response<RoleResponseDto?>(response, "Perfil criado com sucesso."), 201);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Erro ao criar perfil {Name}", request.Name);
             return (new Response<RoleResponseDto?>(null, "Erro ao criar Perfil!"), 500);
         }
     }
@@ -149,8 +152,9 @@ public class RoleServices(ApplicationDbContext context) : IRoleService
 
             return (new Response<RoleResponseDto?>(response, "Perfil atualizado com sucesso."), 200);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Erro ao atualizar perfil {RoleId}", id);
             return (new Response<RoleResponseDto?>(null, "Erro ao atualizar Perfil!"), 500);
         }
     }
@@ -181,8 +185,9 @@ public class RoleServices(ApplicationDbContext context) : IRoleService
 
             return (new Response<bool>(true, "Perfil removido com sucesso."), 200);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Erro ao remover perfil {RoleId}", id);
             return (new Response<bool>(false, "Erro ao remover Perfil!"), 500);
         }
     }

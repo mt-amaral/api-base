@@ -9,7 +9,8 @@ using Microsoft.EntityFrameworkCore;
 namespace Api.Services;
 
 public class UserService(ApplicationDbContext context,
-    UserManager<User> userManager, IUserLoggedService userLoggedService) : IUserService
+    UserManager<User> userManager, IUserLoggedService userLoggedService,
+    ILogger<UserService> logger) : IUserService
 {
 
     public async Task<(PagedResponse<List<UserResponseDto>?>, short)> GetUsersAsync(FilterUsersRequestDto request, CancellationToken ct)
@@ -63,8 +64,9 @@ public class UserService(ApplicationDbContext context,
                 200
             );
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Erro ao recuperar usuários");
             return (
                 new PagedResponse<List<UserResponseDto>?>(null, 0, request.PageNumber, request.PageSize, "Erro ao recuperar usuários"),
                 500
@@ -112,8 +114,9 @@ public class UserService(ApplicationDbContext context,
 
             return (new Response<UserResponseDto?>(response, $"Usuário {user.UserName} registrado com sucesso!"), 200);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Erro ao criar usuário {Email}", request.Email);
             return (new Response<UserResponseDto?>(null, $"Erro na criação de usuário: {request.Email}"), 500);
         }
     }
@@ -152,8 +155,9 @@ public class UserService(ApplicationDbContext context,
 
             return await BuildUpdatedResponseAsync(entity, ct);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Erro ao atualizar usuário {UserId}", userId);
             return (new Response<UserResponseDto?>(null, $"Erro na atualização de usuário: {userRequest.Email}"), 500);
         }
     }
@@ -184,8 +188,9 @@ public class UserService(ApplicationDbContext context,
 
             return await BuildUpdatedResponseAsync(entity, ct);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Erro ao atualizar usuário logado");
             return (new Response<UserResponseDto?>(null, $"Erro na atualização de usuário: {request.Email}"), 500);
         }
     }
@@ -242,8 +247,9 @@ public class UserService(ApplicationDbContext context,
 
             return (new Response<bool>(true, "Usuário removido com sucesso"), 200);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Erro ao remover usuário {UserId}", userId);
             return (new Response<bool>(false, "Erro ao remover usuário"), 500);
         }
     }
