@@ -1,4 +1,4 @@
-# API de autenticação .net 9.0
+# API de autenticação .net 10.0
 
 API em ASP.NET Core com foco em autenticação usando **ASP.NET Identity**, **cookie auth** e **refresh token**.
 
