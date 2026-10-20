@@ -205,7 +205,6 @@ public class AccountServices(
 
     private async Task<LoginResponseDto> BuildLoginResponseAsync(User user, CancellationToken ct)
     {
-        // Um perfil por usuário: mesma regra de ordenação usada em UserService
         var roleId = await context.Set<IdentityUserRole<long>>()
             .AsNoTracking()
             .Where(x => x.UserId == user.Id)

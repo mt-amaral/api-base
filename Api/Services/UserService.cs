@@ -16,7 +16,6 @@ public class UserService(ApplicationDbContext context,
     {
         try
         {
-            // Subquery em vez de join: usuário sem perfil continua na lista e nunca duplica linha
             var query =
                 from u in context.User.AsNoTracking()
                 orderby u.Id
@@ -93,7 +92,6 @@ public class UserService(ApplicationDbContext context,
 
             var user = new User(userName: request.UserName, email: request.Email);
 
-            // UserManager usa o mesmo DbContext: usuário e perfil gravam juntos ou nada grava
             await using var transaction = await context.Database.BeginTransactionAsync(ct);
 
             var statusCreate = await userManager.CreateAsync(user, request.NewPassword);
@@ -251,7 +249,6 @@ public class UserService(ApplicationDbContext context,
     }
 
 
-    // Regra do sistema: um perfil por usuário. Toda escrita de perfil passa por aqui.
     private async Task ReplaceRoleAsync(long userId, long roleId, CancellationToken ct)
     {
         var userRoles = await context.Set<IdentityUserRole<long>>()

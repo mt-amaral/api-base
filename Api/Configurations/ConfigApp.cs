@@ -52,13 +52,12 @@ public static class ConfigApp
     // Chave identificadora do cookie de refresh token
     public static string RefreshTokenCookieName = "refreshToken";
 
-    // Tempo de duração do cookie de autenticação, renovado a cada uso (minutos)
+    // Tempo de duração de token (minutos)
     public static int TokenCookieTime = 15;
 
-    // Tempo de duração do refresh token e da sessão: cookie e banco (minutos)
+    // Tempo de duração de token (minutos)
     public static int RefreshTokenCookieTime = 300;
 
-    // SameSite dos cookies de auth e refresh. None permite front em outro domínio (exige HTTPS)
     public static SameSiteMode CookieSameSite = SameSiteMode.None;
 
     // ========== Rate Limiting ==========

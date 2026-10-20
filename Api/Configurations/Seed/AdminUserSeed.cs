@@ -30,7 +30,6 @@ public sealed class AdminUserSeed : IAppSeed
 
         if (!await userManager.IsInRoleAsync(user, Permissions.Admin))
         {
-            // Um perfil por usuário: tira o atual antes de vincular Admin
             var currentRoles = await userManager.GetRolesAsync(user);
             if (currentRoles.Count > 0)
             {
