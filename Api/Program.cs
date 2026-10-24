@@ -29,7 +29,10 @@ builder.Services.AddScoped<IUserLoggedService, UserLoggedService>();
 builder.Services.AddScoped<IRoleService, RoleServices>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRoleClaimService, RoleClaimService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IClaimsTransformation, AppClaimsTransformation>();
+
+builder.Services.AddMessagingSetup();
 
 if (builder.Environment.IsStaging())
 {

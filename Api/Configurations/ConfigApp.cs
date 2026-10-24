@@ -60,6 +60,12 @@ public static class ConfigApp
 
     public static SameSiteMode CookieSameSite = SameSiteMode.None;
 
+    public static string EmailQueueName = "email-send";
+
+    public static int OutboxBatchSize = 20;
+
+    public static int OutboxPollSeconds = 5;
+
     // ========== Rate Limiting ==========
 
     // Limites para clientes autenticados

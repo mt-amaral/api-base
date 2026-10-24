@@ -20,6 +20,8 @@ public static class Permissions
     public const string ClaimsView = "users.claims.view";
     public const string ClaimsUpdate = "users.claims.update";
 
+    public const string EmailsSend = "emails.send";
+
 
     public static IEnumerable<PermissionDefinition> GetPermissions()
     {
@@ -37,6 +39,8 @@ public static class Permissions
 
             new(ClaimsView, Permission, "Pode visualizar permissões de perfil"),
             new(ClaimsUpdate, Permission, "Pode atualizar permissões de perfil"),
+
+            new(EmailsSend, Permission, "Pode enviar e-mails"),
         };
     }
 }
